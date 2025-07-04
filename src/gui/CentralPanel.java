@@ -32,11 +32,19 @@ public abstract class CentralPanel {
         return MAIN_PANEL;
     }
 
+    /// Quando si modifica theme aggiorna i colori del pannello
     public static void update_colors() {
         IMAGE_PANEL.setBackground((Color) GraphicsSettings.active_theme().get_value("central_panel_background"));
         IMAGE_PANEL.set_icon((ImageIcon) GraphicsSettings.active_theme().get_value("central_panel_icon"));
     }
 
+     /**
+     * Questo JPanel può essere coperto da un pannello programmabile, questo pannello non viene controllato in nessun
+     * modo da Molly e un suo uso inappropriato può portare problemi ad altre mod e l'utente.
+     * Ci si aspetta che venga utilizzato solo da una mod alla volta, e ogni volta che questa viene stoppata dovrà
+     * resettarlo e renderlo invisibile
+     * @return oggetto JPanel sovrapposto al CentralPanel
+     */
     public static JPanel get_programmable_panel() {
         return PROGRAMMABLE_PANEL;
     }

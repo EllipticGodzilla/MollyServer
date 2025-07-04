@@ -98,8 +98,6 @@ public abstract class SettingsFrame {
         MollySettingsPanel.init();
         FileManagerPanel.init();
         ModManagerPanel.init();
-        ServerSettingsPanel.init();
-        DnsSettingsPanel.init();
     }
 
     public static void update_colors() {

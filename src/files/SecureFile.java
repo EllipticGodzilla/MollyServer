@@ -8,12 +8,18 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
 
+/**
+ * Rappresenta un file esterno al progetto dando la possibilità di cifrarne il contenuto.
+ * Per interagire con i secure file non si deve passare per questa classe ma dai vari metodi in FileInterface, nelle
+ * prossime versioni probabilmente questa dinamica cambierà
+ */
 public class SecureFile {
     private boolean is_encoded;
 
     private final FileOutputStream FOS;
     private final File FILE;
 
+    /// Wrapper che rappresenta un file già esistente
     protected SecureFile(String pathname) {
         FileOutputStream temp_fos = null;
         File temp_file = null;
@@ -33,7 +39,12 @@ public class SecureFile {
         FILE = temp_file;
     }
 
-    protected SecureFile(String pathname, boolean encoded) { //crea un nuovo SecureFile da un file non esistente
+    /**
+     * Crea un nuovo file specificando se cifrarne il contenuto o meno
+     * @param pathname posizione del nuovo file
+     * @param encoded true se si vuole cifrare il contenuto, false altrimenti
+     */
+    protected SecureFile(String pathname, boolean encoded) {
         this.is_encoded = encoded;
         this.FILE = new File(pathname);
 
@@ -56,14 +67,26 @@ public class SecureFile {
         FOS = temp_fos;
     }
 
-    public void set_encoded(boolean encode) {
+    /**
+     * Modifica la sicurezza del file
+     * @param encode true per iniziare a cifrare il contenuto del file, false per smettere di cifrare
+     */
+    protected void set_encoded(boolean encode) {
         this.is_encoded = encode;
     }
 
-    public boolean is_protected() {
+    /**
+     * Test sulla sicurezza del file
+     * @return true se il suo contenuto è cifrato, false altrimenti
+     */
+    protected boolean is_protected() {
         return is_encoded;
     }
 
+    /**
+     * Legge il contenuto del file, nel caso sia cifrato viene decifrato prima di ritornarlo.
+     * @return testo in chiaro contenuto nel file
+     */
     protected byte[] read() {
         byte[] txt;
         try {
@@ -92,6 +115,10 @@ public class SecureFile {
         return txt;
     }
 
+    /**
+     * Aggiunge dei dati a quelli scritti già sul file
+     * @param data dati da aggiungere al file
+     */
     protected void append(byte[] data) {
         if (is_encoded) {
             byte[] written_data = read();
@@ -110,6 +137,10 @@ public class SecureFile {
         }
     }
 
+    /**
+     * Cancella ciò che era scritto sul file e scrive dei dati
+     * @param data dati da scrivere nel file
+     */
     protected void replace(byte[] data) {
         try { //elimina il contenuto del file
             new FileOutputStream(FILE, false).close();
@@ -147,11 +178,17 @@ public class SecureFile {
         }
     }
 
+    /**
+     * Elimina il file
+     */
     protected void delete() {
         close();
         FILE.delete();
     }
 
+    /**
+     * Chiude gli stream aperti
+     */
     protected void close() {
         try {
             FOS.close();

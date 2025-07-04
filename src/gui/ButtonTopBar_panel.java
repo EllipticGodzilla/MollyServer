@@ -7,12 +7,10 @@ import gui.custom.ButtonInfo;
 import gui.temppanel.TempPanel;
 import gui.temppanel.TempPanel_info;
 import gui.themes.GraphicsSettings;
-import network.ServerInterface;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionListener;
-import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Vector;
@@ -85,11 +83,13 @@ public abstract class ButtonTopBar_panel {
         stop_mod.setOpaque(false);
         start_server.setOpaque(false);
         stop_server.setOpaque(false);
+        server_info.setOpaque(false);
         right_shift.setContentAreaFilled(false);
         left_shift.setContentAreaFilled(false);
         stop_mod.setContentAreaFilled(false);
         start_server.setContentAreaFilled(false);
         stop_server.setContentAreaFilled(false);
+        server_info.setContentAreaFilled(false);
 
         buttons_container.setLayout(new FlowLayout(FlowLayout.LEFT, 3, 0));
         add_buttons_to_panel();
@@ -118,18 +118,21 @@ public abstract class ButtonTopBar_panel {
         buttons_panel.add(stop_server, c);
 
         c.gridx = 3;
+        buttons_panel.add(server_info, c);
+
+        c.gridx = 4;
         c.insets.right = 0;
         buttons_panel.add(stop_mod, c);
 
-        c.gridx = 4;
+        c.gridx = 5;
         buttons_panel.add(sep, c);
 
-        c.gridx = 6;
+        c.gridx = 7;
         buttons_panel.add(right_shift, c);
 
         c.weightx = 1;
 
-        c.gridx = 5;
+        c.gridx = 6;
         buttons_panel.add(buttons_scroller, c);
 
         return buttons_panel;
@@ -183,9 +186,10 @@ public abstract class ButtonTopBar_panel {
 
             if (info != null) {
                 switch (info.ActiveWhen) {
-                    case ButtonInfo.ALWAYS -> button_obj.setEnabled(true);
-                    case ButtonInfo.CONNECTED -> button_obj.setEnabled(ServerInterface.is_connected());
-                    case ButtonInfo.INCLASS -> button_obj.setEnabled(ServerInterface.is_in_class());
+                    //todo per il server non hanno senso queste distinzioni
+//                    case ButtonInfo.ALWAYS -> button_obj.setEnabled(true);
+//                    case ButtonInfo.CONNECTED -> button_obj.setEnabled(ServerInterface.is_connected());
+//                    case ButtonInfo.INCLASS -> button_obj.setEnabled(ServerInterface.is_in_class());
                 }
             }
         }
@@ -234,8 +238,9 @@ public abstract class ButtonTopBar_panel {
         });
 
         switch (info.ActiveWhen) {
-            case ButtonInfo.CONNECTED -> button.setEnabled(ServerInterface.is_connected());
-            case ButtonInfo.INCLASS -> button.setEnabled(ServerInterface.is_in_class());
+            //todo per il server non ha senso questa distinzione
+//            case ButtonInfo.CONNECTED -> button.setEnabled(ServerInterface.is_connected());
+//            case ButtonInfo.INCLASS -> button.setEnabled(ServerInterface.is_in_class());
         }
 
         return button;

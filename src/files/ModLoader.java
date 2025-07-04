@@ -4,7 +4,7 @@ import files.annotations.*;
 import gui.ButtonTopBar_panel;
 import gui.custom.ButtonIcons;
 import gui.custom.ButtonInfo;
-import network.*;
+import network.OnArrival;
 
 import javax.swing.*;
 import java.io.InputStream;
@@ -189,10 +189,10 @@ public class ModLoader extends ClassLoader {
             load_button(entry_class, mod_name);
         }
         for (Class<?> entry_class : encoder_definer) {
-            load_encoder(entry_class);
+//            load_encoder(entry_class);
         }
         for (Class<?> entry_class : connector_definer) {
-            load_encoder(entry_class);
+//            load_encoder(entry_class);
         }
         for (Class<?> entry_class : prefix_definer) {
             load_prefix(entry_class, mod_name);
@@ -204,7 +204,7 @@ public class ModLoader extends ClassLoader {
             if (m.isAnnotationPresent(Prefix.RegisterToPrefix.class)) {
                 String prefix_name = m.getAnnotation(Prefix.RegisterToPrefix.class).prefix_name();
 
-                OnArrival wrapper = (conv_code, msg) -> {
+                OnArrival wrapper = (client, conv_code, msg) -> {
                     try {
                         m.invoke(null, conv_code, msg);
                     }
@@ -214,7 +214,7 @@ public class ModLoader extends ClassLoader {
                     }
                 };
 
-                Connection.register_prefix_action(prefix_name, wrapper);
+//                Connection.register_prefix_action(prefix_name, wrapper); todo
             }
         }
     }
@@ -269,118 +269,119 @@ public class ModLoader extends ClassLoader {
         Logger.log("aggiunto con successo il pulsante: " + name + " alla top bar");
     }
 
-    public static void load_encoder(Class<?> encoder_class) {
-        Logger.log("registro un nuovo encoder dalla classe: " + encoder_class.getName());
-
-        String name = encoder_class.getAnnotation(EncoderDefinition.class).name();
-        Method initializer = null, encoder = null, decoder = null;
-
-        for (Method method : encoder_class.getMethods()) {
-            if (method.isAnnotationPresent(EncoderDefinition.Initializer.class) && initializer == null) {
-                initializer = method;
-            }
-            else if (method.isAnnotationPresent(EncoderDefinition.Encoder.class) && encoder == null) {
-                encoder = method;
-            }
-            else if (method.isAnnotationPresent(EncoderDefinition.Decoder.class) && decoder == null) {
-                decoder = method;
-            }
-
-            //quando ha inizializzato tutti i metodi smette di cercarne altri
-            if (initializer != null && encoder != null && decoder != null) {
-                break;
-            }
-        }
-
-        //non è riuscito a inizializzare tutti i metodi
-        if (initializer == null || encoder == null || decoder == null) {
-            Logger.log("nella classe: " + encoder_class.getName() + " non sono specificati tutti i metodi necessari", true);
-
-            if (initializer == null) {
-                Logger.log("initializer non specificato", true);
-            }
-            if (encoder == null) {
-                Logger.log("encoder non specificato", true);
-            }
-            if (decoder == null) {
-                Logger.log("decoder non specificato", true);
-            }
-
-            return;
-        }
-
-        int array_size = encoder_class.getAnnotation(EncoderDefinition.class).array_size();
-
-        EncodersWrapper info = new EncodersWrapper(name, initializer, array_size, encoder, decoder);
-        ServerInterface.add_encoder(name, info);
-    }
-
-    public static void load_connector(Class<?> connector_class) {
-        Logger.log("aggiungo un nuovo connector dalla classe: " + connector_class.getName());
-        Connector annotation = connector_class.getAnnotation(Connector.class);
-        String connector_name = annotation.name();
-
-        if (annotation.type() == ConnectorWrapper.DNS_CONNECTOR) {
-            Method handshake_method = null;
-
-            for (Method method : connector_class.getMethods()) {
-                if (method.isAnnotationPresent(Connector.handshake.class)) {
-                    handshake_method = method;
-                    break;
-                }
-            }
-
-            if (handshake_method == null) {
-                Logger.log("per il connector: (" + connector_name + ") non è stato registrato nessun metodo per gestire l'handshake", true);
-                return;
-            }
-
-            ConnectorWrapper wrapper = new ConnectorWrapper(connector_name, handshake_method);
-            ServerInterface.add_connector(connector_name, wrapper);
-        }
-        else {
-            Method  handshake = null,
-                    sender = null,
-                    reader = null,
-                    closer = null;
-
-            for (Method method : connector_class.getMethods()) {
-                if (method.isAnnotationPresent(Connector.handshake.class) && handshake == null) {
-                    handshake = method;
-                }
-                else if (method.isAnnotationPresent(Connector.reader.class) && reader == null) {
-                    reader = method;
-                }
-                else if (method.isAnnotationPresent(Connector.sender.class) && sender == null) {
-                    sender = method;
-                }
-                else if (method.isAnnotationPresent(Connector.closer.class) && closer == null) {
-                    closer = method;
-                }
-
-                if (handshake != null && reader != null && sender != null && closer != null) {
-                    break;
-                }
-            }
-
-            if (handshake == null || sender == null || reader == null || closer == null) {
-                Logger.log("per il connector: (" + connector_name + ") non sono stati specificati tutti i metodi necessari", true);
-
-                if (handshake == null) {
-                    Logger.log("handshake non specificato", true);
-                }
-                if (sender == null) {
-                    Logger.log("sender non specificato", true);
-                }
-                if (closer == null) {
-                    Logger.log("closer non specificato", true);
-                }
-
-                return;
-            }
-
-            ConnectorWrapper wrapper = new ConnectorWrapper(connector_name, handshake, sender, reader, closer);
-            ServerInterface.add_connector(connector_name, wrapper);
-        }
-    }
+    //todo load_encoder e load_connector
+//    public static void load_encoder(Class<?> encoder_class) {
+//        Logger.log("registro un nuovo encoder dalla classe: " + encoder_class.getName());
+//
+//        String name = encoder_class.getAnnotation(EncoderDefinition.class).name();
+//        Method initializer = null, encoder = null, decoder = null;
+//
+//        for (Method method : encoder_class.getMethods()) {
+//            if (method.isAnnotationPresent(EncoderDefinition.Initializer.class) && initializer == null) {
+//                initializer = method;
+//            }
+//            else if (method.isAnnotationPresent(EncoderDefinition.Encoder.class) && encoder == null) {
+//                encoder = method;
+//            }
+//            else if (method.isAnnotationPresent(EncoderDefinition.Decoder.class) && decoder == null) {
+//                decoder = method;
+//            }
+//
+//            //quando ha inizializzato tutti i metodi smette di cercarne altri
+//            if (initializer != null && encoder != null && decoder != null) {
+//                break;
+//            }
+//        }
+//
+//        //non è riuscito a inizializzare tutti i metodi
+//        if (initializer == null || encoder == null || decoder == null) {
+//            Logger.log("nella classe: " + encoder_class.getName() + " non sono specificati tutti i metodi necessari", true);
+//
+//            if (initializer == null) {
+//                Logger.log("initializer non specificato", true);
+//            }
+//            if (encoder == null) {
+//                Logger.log("encoder non specificato", true);
+//            }
+//            if (decoder == null) {
+//                Logger.log("decoder non specificato", true);
+//            }
+//
+//            return;
+//        }
+//
+//        int array_size = encoder_class.getAnnotation(EncoderDefinition.class).array_size();
+//
+//        EncodersWrapper info = new EncodersWrapper(name, initializer, array_size, encoder, decoder);
+//        ServerInterface.add_encoder(name, info);
+//    }
+//
+//    public static void load_connector(Class<?> connector_class) {
+//        Logger.log("aggiungo un nuovo connector dalla classe: " + connector_class.getName());
+//        Connector annotation = connector_class.getAnnotation(Connector.class);
+//        String connector_name = annotation.name();
+//
+//        if (annotation.type() == ConnectorWrapper.DNS_CONNECTOR) {
+//            Method handshake_method = null;
+//
+//            for (Method method : connector_class.getMethods()) {
+//                if (method.isAnnotationPresent(Connector.handshake.class)) {
+//                    handshake_method = method;
+//                    break;
+//                }
+//            }
+//
+//            if (handshake_method == null) {
+//                Logger.log("per il connector: (" + connector_name + ") non è stato registrato nessun metodo per gestire l'handshake", true);
+//                return;
+//            }
+//
+//            ConnectorWrapper wrapper = new ConnectorWrapper(connector_name, handshake_method);
+//            ServerInterface.add_connector(connector_name, wrapper);
+//        }
+//        else {
+//            Method  handshake = null,
+//                    sender = null,
+//                    reader = null,
+//                    closer = null;
+//
+//            for (Method method : connector_class.getMethods()) {
+//                if (method.isAnnotationPresent(Connector.handshake.class) && handshake == null) {
+//                    handshake = method;
+//                }
+//                else if (method.isAnnotationPresent(Connector.reader.class) && reader == null) {
+//                    reader = method;
+//                }
+//                else if (method.isAnnotationPresent(Connector.sender.class) && sender == null) {
+//                    sender = method;
+//                }
+//                else if (method.isAnnotationPresent(Connector.closer.class) && closer == null) {
+//                    closer = method;
+//                }
+//
+//                if (handshake != null && reader != null && sender != null && closer != null) {
+//                    break;
+//                }
+//            }
+//
+//            if (handshake == null || sender == null || reader == null || closer == null) {
+//                Logger.log("per il connector: (" + connector_name + ") non sono stati specificati tutti i metodi necessari", true);
+//
+//                if (handshake == null) {
+//                    Logger.log("handshake non specificato", true);
+//                }
+//                if (sender == null) {
+//                    Logger.log("sender non specificato", true);
+//                }
+//                if (closer == null) {
+//                    Logger.log("closer non specificato", true);
+//                }
+//
+//                return;
+//            }
+//
+//            ConnectorWrapper wrapper = new ConnectorWrapper(connector_name, handshake, sender, reader, closer);
+//            ServerInterface.add_connector(connector_name, wrapper);
+//        }
+//    }
 }
