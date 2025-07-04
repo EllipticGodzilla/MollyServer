@@ -1,4 +1,4 @@
-package network;
+package network.connection;
 
 /**
  * Permette di cifrare le connessioni fra server e client, per inizializzare l encoder vengono concordati con il client

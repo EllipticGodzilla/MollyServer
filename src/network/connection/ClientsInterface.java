@@ -1,11 +1,10 @@
-package network;
+package network.connection;
 
 import files.Logger;
 import gui.ClientList_panel;
+import network.ServerManager;
 
 import javax.crypto.Cipher;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Method;
 import java.security.SecureRandom;
 import java.util.*;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -19,23 +18,11 @@ import java.util.concurrent.ArrayBlockingQueue;
  * tramite i vari metodi.
  */
 public abstract class ClientsInterface {
-    /// Mappa fra il nome assegnato a ogni {@code Connector} registrato e il suo wrapper
-    private static final Map<String, ConnectorWrapper> registered_connectors = new LinkedHashMap<>();
-
-    /// Mappa fra il nome di ogni {@code Encoder} registrato e il constructor della sua classe
-    private static final Map<String, Constructor<? extends Encoder>> registered_encoders = new LinkedHashMap<>();
-
     /// Mappa fra il nome del {@code Connector} a cui sono legati e l'istanza di {@code Client} dei clients online
     private static final Map<String, Vector<Client>> online_clients = new LinkedHashMap<>();
 
     /// Mappa fra il nome di ogni clients registrato nel server, e l hash della sua password
     private static final Map<String, byte[]> clients_credentials = new LinkedHashMap<>();
-
-    /// Istanza di un login manager utilizzata per gestire login / registrazioni di utenti nel server
-    private static LoginManager active_login_manager;
-
-    /// Mappa fra il nome di ogni login manager disponibile e la sua implementazione
-    private static final Map<String, LoginManager> login_managers = new LinkedHashMap<>();
 
     /// Array di threads che rispondono ai messaggi ricevuti dai clients
     private static Thread[] threads_workers;
@@ -51,57 +38,6 @@ public abstract class ClientsInterface {
      * processati. La dimensione della queue è fissata e modificabile dall'utente a piacimento nelle impostazioni
      */
     private static ArrayBlockingQueue<WorkData> workers_backlog = new ArrayBlockingQueue<>(1);
-
-    //      LOGIN_MANAGER CHANGES
-
-    /**
-     * Tenta di aggiungere un login manager nominato {@code name} fra quelli disponibili per gestire i login.
-     * @param name    nome con cui ci si riferisce al login manager
-     * @param manager implementazione del manager
-     * @return {@code true} se è stato aggiunto, {@code false} se è già presente un manager con questo nome
-     */
-    public static boolean register_login_manager(String name, LoginManager manager) {
-        if (login_managers.containsKey(name)) {
-            return false;
-        }
-
-        login_managers.put(name, manager);
-        return true;
-    }
-
-    /**
-     * Prova a modificare il login manager attivo, per modificarlo il server deve essere spento.
-     * @param manager_name nome del nuovo manager da utilizzare
-     * @return {@code true} se riesce a impostare il manager, {@code false} se il server è ancora attivo
-     */
-    public static boolean set_login_manager(String manager_name) {
-        //todo if (server.is_active())
-
-        LoginManager manager = login_managers.get(manager_name);
-        if (manager == null) {
-            Logger.log("impossibile impostare il login manager: (" + manager_name + ") come attivo, manager non trovato", true);
-            return false;
-        }
-
-        active_login_manager = manager;
-        return true;
-    }
-
-    /**
-     * Ritorna il login manager utilizzato in questo momento
-     * @return login manager in utilizzo
-     */
-    public static LoginManager get_login_manager() {
-        return active_login_manager;
-    }
-
-    /**
-     * Ritorna una lista con tutti i nomi dei login managers registrati
-     * @return nomi dei login managers disponibili
-     */
-    public static Set<String> get_available_login_managers() {
-        return login_managers.keySet();
-    }
 
     //      WORKERS BACKLOG CAPACITY
 
@@ -225,98 +161,7 @@ public abstract class ClientsInterface {
         //tutti i workers stanno già lavorando, il messaggio verrà processato automaticamente quando uno si libera
     }
 
-    //      METODI IO PER LE MAPPE
-
-    /**
-     * Aggiunge un nuovo {@code Connector} utilizzando i metodi specificati da una mod
-     * @param starter metodo per fare partire il {@code Connector}
-     * @param stopper metodo per stoppare il {@code Connector}
-     * @param name nome del {@code Connector}
-     */
-    public static void register_connector(Method starter, Method stopper, String name) {
-        if (registered_connectors.containsKey(name)) {
-            Logger.log("impossibile registrare più di un connector con il nome: (" + name + ")", true);
-            return;
-        }
-
-        registered_connectors.put(name, new ConnectorWrapper(starter, stopper, name));
-        Logger.log("registrato un nuovo connector: (" + name + ")");
-    }
-
-    /**
-     * Ritorna una lista con tutti i nomi dei {@code connector} registrati
-     * @return vettore con i nomi dei {@code Connector} registrati
-     */
-    public static String[] get_connectors_list() {
-        return registered_connectors.keySet().toArray(new String[0]);
-    }
-
-    /**
-     * Ritorna l'oggetto {@code ConnectorWrapper} rappresentando il connector con il nome specificato, o {@code null}
-     * se non trova nessun {@code Connector} registrato con quel nome
-     * @param name nome del connector
-     * @return oggetto {@code ConnectorWrapper} rappresentante il connector richiesto
-     */
-    public static ConnectorWrapper get_connector(String name) {
-        return registered_connectors.get(name);
-    }
-
-    /**
-     * Dalla definizione di una classe che estende {@code Encoder} trova il constructor e lo registra fra gli encoder
-     * disponibili per le connessioni
-     * @param encoder_class classe che specifica un encoder
-     * @param encoder_name  nome dell encoder da aggiungere
-     */
-    public static void register_encoder(Class<? extends Encoder> encoder_class, String encoder_name) {
-        if (registered_encoders.containsKey(encoder_name)) {
-            Logger.log("impossibile registrare più di un Encoder con il nome: (" + encoder_name + ")", true);
-            return;
-        }
-
-        try {
-            registered_encoders.put(encoder_name, encoder_class.getConstructor());
-        }
-        catch (Exception e) {
-            Logger.log("impossibile trovare il constructor per l'encoder: (" + encoder_name + ")", true);
-            Logger.log(e.getMessage(), true);
-        }
-    }
-
-    /**
-     * Ritorna la lista con tutti i nomi dei {@code Encoder} registrati
-     * @return vettore con i nomi dei {@code Encoder}
-     */
-    public static String[] get_encoders_list() {
-        return registered_encoders.keySet().toArray(new String[0]);
-    }
-
-    /**
-     * Costruisce una nuova istanza dell {@code Encoder} registrato con il nome specificato, per inizializzare l encoder
-     * dovranno essere specificati i bytes concordati con il client.
-     * @param encoder_name nome dell encoder da inizializzare
-     * @param init_bytes   bytes concordati con il client necessari a inizializzare l encdoer
-     * @return istanza di {@code Encoder} inizializzata dai bytes ricevuti
-     */
-    public static Encoder get_encoder(String encoder_name, byte[] init_bytes) {
-        Constructor<? extends Encoder> constructor = registered_encoders.get(encoder_name);
-        if (constructor == null) {
-            Logger.log("impossibile trovare un encoder con il nome: (" + encoder_name + ")", true);
-            return null;
-        }
-
-        try {
-            Encoder encoder = constructor.newInstance();
-            encoder.init(init_bytes);
-
-            return encoder;
-        }
-        catch (Exception e) {
-            Logger.log("impossibile creare una nuova istanza dell encoder: (" + encoder_name + ")", true);
-            Logger.log(e.getMessage(), true);
-
-            return null;
-        }
-    }
+    //      METODI IO PER LE MAPPE DEI CLIENTS
 
     /**
      * Ritorna la lista di tutti i nomi dei Clients registrati in questo server
@@ -380,13 +225,9 @@ public abstract class ClientsInterface {
             return false;
         }
 
-        Constructor<? extends Encoder> encoder_constructor = registered_encoders.get(encoder_name);
-        Encoder encoder;
-        try {
-            encoder = encoder_constructor.newInstance();
-        }
-        catch (Exception e) {
-            Logger.log("impossibile creare una nuova istanza dell encoder: (" + encoder_name + ")\n\t\t\t\t" + e.getMessage(), true);
+        Encoder encoder = ServerManager.get_encoder_instance(encoder_name);
+        if (encoder == null) {
+            Logger.log("impossibile creare una nuova istanza dell encoder: (" + encoder_name + ")", true);
             client.close();
 
             return false;
@@ -404,7 +245,7 @@ public abstract class ClientsInterface {
 
         //esegue il login del client
         Logger.log("attendo richiesta di login / registrazione dal client: (" + client.get_name() + ")");
-        if (active_login_manager.login_client(client)) {
+        if (ServerManager.get_login_manager().login_client(client)) {
             Logger.log("l'utente: (" + client.get_name() + ") è online");
             online_clients.get(connector_name).add(client);
             ClientList_panel.set_online(client.get_name());
@@ -463,7 +304,7 @@ public abstract class ClientsInterface {
         }
 
         String client_encoder = new String(client_encoder_bytes);
-        if (registered_encoders.containsKey(client_encoder)) { //encoder supportato
+        if (ServerManager.exist_encoder(client_encoder)) { //encoder supportato
             Logger.log("il client: (" + client.get_name() + ") ha scelto l encoder: (" + client_encoder + "), encoder supportato");
 
             //conferma la scelta dell encoder al client
@@ -512,7 +353,7 @@ public abstract class ClientsInterface {
      * @return il nome del nuovo encoder concordato o null se il protocollo è fallito
      */
     private static String changing_encoder(Client client, Cipher[] session_key) {
-        Set<String> supported_encoders = registered_encoders.keySet();
+        String[] supported_encoders = ServerManager.get_encoders_list();
         StringBuilder encoders_list = new StringBuilder();
 
         for (String encoder : supported_encoders) {
@@ -548,7 +389,7 @@ public abstract class ClientsInterface {
 
             return null;
         }
-        else if (registered_encoders.containsKey(client_reply)) { //client ha scelto un encoder supportato
+        else if (ServerManager.exist_encoder(client_reply)) { //client ha scelto un encoder supportato
             Logger.log("il client: (" + client.get_name() + ") ha scelto di usare l encoder: (" + client_reply + ")");
 
             try {

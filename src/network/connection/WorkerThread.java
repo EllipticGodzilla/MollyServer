@@ -1,6 +1,7 @@
-package network;
+package network.connection;
 
 import files.Logger;
+import network.ServerManager;
 
 import java.util.Arrays;
 import java.util.LinkedHashMap;
@@ -152,10 +153,10 @@ public class WorkerThread extends Thread {
             run_prefix(client, prefix, payload, data.get_cc());
         }
         else if (Arrays.equals(msg, "login".getBytes())) {
-            client.send(ClientsInterface.get_login_manager().get_login_request(), data.get_cc());
+            client.send(ServerManager.get_login_manager().get_login_request(), data.get_cc());
         }
         else if (Arrays.equals(msg, "register".getBytes())) {
-            client.send(ClientsInterface.get_login_manager().get_register_request(), data.get_cc());
+            client.send(ServerManager.get_login_manager().get_register_request(), data.get_cc());
         }
         else { //client senza login ha inviato qualcosa di diverso da "login" o "register"
             Logger.log("il client: (" + client.get_name() + ") ha inviato: (" + new String(msg) + ") prima di eseguire il login", true);
