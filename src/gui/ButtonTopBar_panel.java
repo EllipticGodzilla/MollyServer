@@ -207,10 +207,10 @@ public abstract class ButtonTopBar_panel {
     //aggiunge tutti i pulsanti specificati in added_buttons al pannello
     private static void add_buttons_to_panel() {
         for (Pair<ButtonIcons, ButtonInfo> button_pair : added_buttons) {
-            JButton button  = init_button(button_pair.el1, button_pair.el2);
+            JButton button  = init_button(button_pair.first(), button_pair.second());
 
             buttons_container.add(button);
-            buttons_info.put(button_pair.el2.name, button_pair.el2);
+            buttons_info.put(button_pair.second().name, button_pair.second());
         }
     }
 

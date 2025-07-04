@@ -150,10 +150,10 @@ public abstract class LoginManager {
 
         Pair<Boolean, String> result = login_tester(request_data);
 
-        if (result.el1 && !ClientsInterface.is_online(result.el2)) { //login con successo
-            return result.el2;
+        if (result.first() && !ClientsInterface.is_online(result.second())) { //login con successo
+            return result.second();
         }
-        else if (result.el1) { //richiesta valida ma un client è già online con quell'utente
+        else if (result.first()) { //richiesta valida ma un client è già online con quell'utente
             Logger.log("il client: (" + client.get_name() + ") ha tentato di eseguire il login in un utente già online", true);
             client.send("fail:utente già online".getBytes(), cc);
 
@@ -161,7 +161,7 @@ public abstract class LoginManager {
         }
         else { //login fallito
             Logger.log("il client: (" + client.get_name() + ") ha fallito la registrazione di un utente", true);
-            client.send(("fail:" + result.el2).getBytes(), cc);
+            client.send(("fail:" + result.second()).getBytes(), cc);
 
             return null;
         }
@@ -180,18 +180,18 @@ public abstract class LoginManager {
         byte[] request_data = Arrays.copyOfRange(request, 8, request.length);
 
         Pair<Boolean, String> result = register_tester(request_data);
-        if (result.el1 && !ClientsInterface.exist_user(result.el2)) { //registrazione con successo
-            return result.el2;
+        if (result.first() && !ClientsInterface.exist_user(result.second())) { //registrazione con successo
+            return result.second();
         }
-        else if (result.el1) { //registrazione corretta ma esiste già un utente con questo nome
-            Logger.log("il client: (" + client.get_name() + ") ha tentato di creare un utente con nome già esistente: (" + result.el2 + ")", true);
+        else if (result.first()) { //registrazione corretta ma esiste già un utente con questo nome
+            Logger.log("il client: (" + client.get_name() + ") ha tentato di creare un utente con nome già esistente: (" + result.second() + ")", true);
             client.send("fail:nome utente già in uso".getBytes(), cc);
 
             return null;
         }
         else { //registrazione fallita
             Logger.log("il client: (" + client.get_name() + ") ha fallito la registrazione di un account", true);
-            client.send(("fail:" + result.el2).getBytes(), cc);
+            client.send(("fail:" + result.second()).getBytes(), cc);
 
             return null;
         }

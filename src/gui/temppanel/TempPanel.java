@@ -14,7 +14,6 @@ import java.awt.*;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
-import java.io.IOException;
 import java.util.Vector;
 
 abstract public class TempPanel {
@@ -400,12 +399,12 @@ abstract public class TempPanel {
         Pair<TempPanel_info, Object> next_info = queue.firstElement();
         queue.removeFirst();
 
-        if (next_info.el2 instanceof Thread thread) { //c'è già un thread che sta attendendo la risposta a questo pannello
-            show(next_info.el1, null); //mostra il pannello senza specificare nessuna azione, altrimenti interrompe anche questo thread
+        if (next_info.second() instanceof Thread thread) { //c'è già un thread che sta attendendo la risposta a questo pannello
+            show(next_info.first(), null); //mostra il pannello senza specificare nessuna azione, altrimenti interrompe anche questo thread
             answer_notifier = thread;
         }
         else { //ci sarà da far partire un TempPanel_action o non è stato specificato nessun codice
-            show(next_info.el1, next_info.el2);
+            show(next_info.first(), next_info.second());
         }
     }
 

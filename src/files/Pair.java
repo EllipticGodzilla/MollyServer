@@ -1,11 +1,3 @@
 package files;
 
-public class Pair <E1, E2> {
-    public E1 el1 = null;
-    public E2 el2 = null;
-
-    public Pair(E1 el1, E2 el2) {
-        this.el1 = el1;
-        this.el2 = el2;
-    }
-}
+public record Pair<E1, E2>(E1 first, E2 second) { }

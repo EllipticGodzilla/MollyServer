@@ -92,6 +92,11 @@ public class WorkerThread extends Thread {
                 data = ClientsInterface.next_workers_data_backlog();
             }
 
+            //se finisce il lavoro e il server è spento non attende nuovi messaggi ma termina
+            if (!ServerManager.get_server_status()) {
+                break;
+            }
+
             try {
                 synchronized (this) {
                     ClientsInterface.set_worker_status(index, false); //si imposta come thread in attesa
@@ -103,7 +108,7 @@ public class WorkerThread extends Thread {
                 break;
             }
         }
-        while (true /* todo if server.is_alive */);
+        while (ServerManager.get_server_status());
 
         Logger.log("un worker thread è stato spento");
     }

@@ -86,8 +86,8 @@ public class FileManagerPanel implements SettingsPanel {
         for (String file_name : changed_files.keySet()) {
             Pair<String, Boolean> changes = changed_files.get(file_name);
 
-            FileInterface.set_encoded(file_name, changes.el2);
-            FileInterface.overwrite_file(file_name, changes.el1.getBytes(StandardCharsets.UTF_8));
+            FileInterface.set_encoded(file_name, changes.second());
+            FileInterface.overwrite_file(file_name, changes.first().getBytes(StandardCharsets.UTF_8));
         }
     }
 

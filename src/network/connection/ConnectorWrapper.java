@@ -72,4 +72,9 @@ public class ConnectorWrapper {
     public boolean is_active() {
         return status;
     }
+
+    /// Ritorna il nome con cui è registrato questo connector e che lo identifica fra tutti i connectors
+    public String get_name() {
+        return NAME;
+    }
 }

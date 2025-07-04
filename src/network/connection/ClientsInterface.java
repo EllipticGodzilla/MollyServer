@@ -25,13 +25,13 @@ public abstract class ClientsInterface {
     private static final Map<String, byte[]> clients_credentials = new LinkedHashMap<>();
 
     /// Array di threads che rispondono ai messaggi ricevuti dai clients
-    private static Thread[] threads_workers;
+    private static Thread[] threads_workers = new Thread[0];
 
     /**
      * Array di Boolean che rispecchiano se il worker thread allo stesso index in {@code threads_workers} è attivo, ed
      * in tal caso vale {@code true}, o è in attesa di nuovo lavoro e vale {@code false}
       */
-    private static Boolean[] workers_status;
+    private static Boolean[] workers_status = new Boolean[0];
 
     /**
      * Queue con ordinamento FIFO in cui vengono inseriti tutti i dati dei messaggi da clients che ancora non sono stati
@@ -71,16 +71,22 @@ public abstract class ClientsInterface {
 
     /**
      * Tenta di reimpostare il numero di Thread creati per rispondere ai messaggi dei clients, è possibile modificare
-     * questo parametro solo quando il server è spento
-     * @param num numero di worker threads
-     * @return {@code true} se il parametro è stato aggiornato, {@code false} se l'operazione è fallita
+     * questo parametro solo quando il server è spento, dovrà essere specificato un numero {@code > 0} o l'operazione
+     * verrà ignorata
+     * @param num intero {@code > 0} di worker threads da impostare
      */
-    public static boolean set_workers_number(int num) {
-        /// todo if (server.is_online)
+    public static void set_workers_number(int num) {
+        if (ServerManager.get_server_status()) {
+            Logger.log("impossibile modificare il numero di worker threads a server attivo", true);
+            return;
+        }
+
+        if (num <= 0) {
+            return;
+        }
 
         //a server spento threads_workers è vuoto, viene popolato all'accensione
         threads_workers = new Thread[num];
-        return true;
     }
 
     /// Ritorna il numero di worker threads creati per rispondere ai messaggi dei clients
@@ -96,17 +102,49 @@ public abstract class ClientsInterface {
     /**
      * All'accensione del server l array {@code threads_workers} sarà vuoto o conterrà threads vecchi e viene popolato
      * con una nuova generazione di threads.
-     * <p>Questa operazione può essere eseguita solo a server spento
-     * @return {@code true} se riesce a ripopolare {@code threads_workers} correttamente, {@code false} se l'operazione
-     * fallisce
+     * <p>Questa operazione può essere eseguita solo a server spento, e si deve aver specificato prima un numero
+     * {@code > 0} di worker threads
+     * @return {@code true} se l'operazione è andata a buon fine, {@code false} se il server è attivo o se il numero
+     * di worker threads è impostato a {@code 0}
      */
     public static boolean populate_worker_threads() {
-        //todo if(server.is_online)
+        if (ServerManager.get_server_status()) {
+            Logger.log("impossibile ripopolare i worker threads con il server attivo", true);
+            return false;
+        }
+
+        if (threads_workers.length == 0) {
+            return false;
+        }
 
         for (int i = 0; i < threads_workers.length; i++) {
             threads_workers[i] = new WorkerThread(i);
         }
         return true;
+    }
+
+    /**
+     * Libera tutti i threads worker notificando tutti quelli che erano in attesa di nuovi messaggi da clients.
+     * Utilizzabile solo una volta spento il server, altrimenti non avrà nessun effetto
+     */
+    public static void free_workers() {
+        if (ServerManager.get_server_status()) {
+            Logger.log("impossibile liberare tutti i thread worker finchè il server è attivo", true);
+            return;
+        }
+
+        //notifica tutti i worker threads in attesa facendoli terminare, tutti gli altri si spegneranno una volta finito
+        for (int i = 0; i < threads_workers.length; i++) {
+            if (!workers_status[i]) {
+                Thread worker = threads_workers[i];
+
+                synchronized (worker) {
+                    worker.notify();
+                }
+            }
+        }
+
+        Logger.log("liberati tutti i thread workers del server");
     }
 
     /**
@@ -205,7 +243,7 @@ public abstract class ClientsInterface {
         return clients_credentials.containsKey(uname);
     }
 
-    //      CONNESSIONE DI UN NUOVO CLIENT
+    //      CLIENTS CONNECTION START / END
 
     /**
      * Riceve un {@code Client} e {@code session key}, arrivati dall handshake con il connector, e dovrà eseguire
@@ -561,6 +599,31 @@ public abstract class ClientsInterface {
             }
 
             return false;
+        }
+    }
+
+    /// Sconnette tutti i clients dal server notificandoli con {@code EOC}, "End Of Connection"
+    public static void disconnect_all() {
+        for (Vector<Client> clients_vector : online_clients.values()) {
+            for (Client client : clients_vector) {
+                client.send("EOC".getBytes());
+                client.close();
+            }
+        }
+        online_clients.clear();
+
+        Logger.log("disconnessi tutti i clients collegati al server");
+    }
+
+    /**
+     * Sconnette tutti i clients che si sono collegati attraverso un dato connector notificano prima ognuno con
+     * {@code EOC}, "End Of Connection"
+     * @param connector_name nome del connector
+     */
+    public static void disconnect_all(String connector_name) {
+        for (Client client : online_clients.get(connector_name)) {
+            client.send("EOC".getBytes());
+            client.close();
         }
     }
 }

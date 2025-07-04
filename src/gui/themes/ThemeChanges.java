@@ -66,10 +66,10 @@ public class ThemeChanges {
          */
         Map<String, String> joined_pairs = new LinkedHashMap<>();
         for (Pair<String, String> first_values : this.changes_vector) {
-            joined_pairs.put(first_values.el1, first_values.el2);
+            joined_pairs.put(first_values.first(), first_values.second());
         }
         for (Pair<String, String> final_values : after_changes.changes_vector) {
-            joined_pairs.put(final_values.el1, final_values.el2);
+            joined_pairs.put(final_values.first(), final_values.second());
         }
 
         String[] joined_keys = joined_pairs.keySet().toArray(new String[0]);

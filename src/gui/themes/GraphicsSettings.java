@@ -127,7 +127,7 @@ public abstract class GraphicsSettings {
                 }
 
                 for (Pair<String, String> pair_value : changes.changes_vector) {
-                    FileInterface.append_to(file_name, (pair_value.el1 + ":" + pair_value.el2 + "\n").getBytes());
+                    FileInterface.append_to(file_name, (pair_value.first() + ":" + pair_value.second() + "\n").getBytes());
                 }
             }
             else {
@@ -175,11 +175,11 @@ public abstract class GraphicsSettings {
 
         //completa la mappa new_values con tutti i valori in changes
         for (Pair<String, String> new_pair : changes) {
-            if (new_pair.el2 == null) { //resetta il valore della key e viene rimossa dalla mappa
-                new_values.remove(new_pair.el1);
+            if (new_pair.second() == null) { //resetta il valore della key e viene rimossa dalla mappa
+                new_values.remove(new_pair.first());
             }
             else {
-                new_values.put(new_pair.el1, new_pair.el2);
+                new_values.put(new_pair.first(), new_pair.second());
             }
         }
 
@@ -255,11 +255,11 @@ public abstract class GraphicsSettings {
         }
 
         for (Pair<String, String> change_pair : changes.changes_vector) {
-            if (change_pair.el2 == null) { //deve resettare il valore di questa chiave
-                theme.reset_key(change_pair.el1);
+            if (change_pair.second() == null) { //deve resettare il valore di questa chiave
+                theme.reset_key(change_pair.first());
             }
             else { //imposta un nuovo valore a questa chiave
-                theme.set_value(change_pair.el1, change_pair.el2);
+                theme.set_value(change_pair.first(), change_pair.second());
             }
         }
 

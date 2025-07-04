@@ -46,7 +46,6 @@ public abstract class FileInterface {
      * Aggiunge alla lista di file updaters e loaders FileInterface::standard_updater e FileInterface::standard_loader
      * che caricano informazioni e le aggiornano per i file presenti di base.
      * Controlla che i file necessari per il funzionamento base di Molly siano presenti
-     * </ul>
      */
     static {
         String tmp_jar_path = FileInterface.class.getProtectionDomain().getCodeSource().getLocation().getPath(); //calcola l'abs path del jar
@@ -57,6 +56,8 @@ public abstract class FileInterface {
         add_file_loader(FileInterface::standard_loader);
 
         check_essential_files();
+
+        Logger.init();
     }
 
     /// Controlla ci siano tutti i files necessari per il funzionamento base di Molly, nel caso manchi qualcuno lo crea

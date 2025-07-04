@@ -1,10 +1,10 @@
 package network;
 
 import files.Logger;
-import network.connection.ConnectorWrapper;
-import network.connection.Encoder;
-import network.connection.LoginManager;
-
+import files.Pair;
+import gui.temppanel.TempPanel;
+import gui.temppanel.TempPanel_info;
+import network.connection.*;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.LinkedHashMap;
@@ -12,13 +12,16 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Gestisce l'attività del server, accensione e spegnimento dei connector.
- * Contiene tutti i parametri del server con liste dei connector, encoder, login manager.
- * todo che cazz fa sta classe? scrivi meglio
+ * Interfaccia per gestire l'attività del server, attivazione e spegnimento dei connectors, e alcuni dei suoi parametri.
+ * Contiene le mappe e i metodi per gestire Connectors, Encoders e LoginManagers
  */
 public class ServerManager {
-    /// Mappa fra il nome assegnato a ogni {@code Connector} registrato e il suo wrapper
-    private static final Map<String, ConnectorWrapper> registered_connectors = new LinkedHashMap<>();
+    /**
+     * Mappa fra il nome assegnato a ogni {@code Connector} registrato e una coppia composta dal suo wrapper, e un bool
+     * che rappresenta il suo status a server attivo, cioè {@code true} se è un connector da attivare con l'accensione
+     * del server, {@code false} se è un connector da ignorare
+     */
+    private static final Map<String, Pair<ConnectorWrapper, Boolean>> registered_connectors = new LinkedHashMap<>();
 
     /// Mappa fra il nome di ogni {@code Encoder} registrato e il constructor della sua classe
     private static final Map<String, Constructor<? extends Encoder>> registered_encoders = new LinkedHashMap<>();
@@ -28,6 +31,12 @@ public class ServerManager {
 
     /// Mappa fra il nome di ogni login manager disponibile e la sua implementazione
     private static final Map<String, LoginManager> login_managers = new LinkedHashMap<>();
+
+    /**
+     * Memorizza la stato del server, dove {@code false} significa che è spento e nessun client si può collegare,
+     * {@code true} rappresenta il server attivo e in attesa di nuove connessioni dai clients
+     */
+    private static boolean server_status = false;
 
     //      LOGIN_MANAGER CHANGES
 
@@ -83,7 +92,8 @@ public class ServerManager {
     //      METODI IO PER LE MAPPE CONNECTOR E ENCODER
 
     /**
-     * Aggiunge un nuovo {@code Connector} utilizzando i metodi specificati da una mod
+     * Aggiunge un nuovo {@code Connector} utilizzando i metodi specificati da una mod, viene registrato come connector
+     * disattivato, cioè che a meno di interventi da parte dell'utente non verrà attivato all'accensione del server
      * @param starter metodo per fare partire il {@code Connector}
      * @param stopper metodo per stoppare il {@code Connector}
      * @param name nome del {@code Connector}
@@ -94,7 +104,8 @@ public class ServerManager {
             return;
         }
 
-        registered_connectors.put(name, new ConnectorWrapper(starter, stopper, name));
+        ConnectorWrapper wrapper = new ConnectorWrapper(starter, stopper, name);
+        registered_connectors.put(name, new Pair<>(wrapper, false));
         Logger.log("registrato un nuovo connector: (" + name + ")");
     }
 
@@ -113,7 +124,7 @@ public class ServerManager {
      * @return oggetto {@code ConnectorWrapper} rappresentante il connector richiesto
      */
     public static ConnectorWrapper get_connector(String name) {
-        return registered_connectors.get(name);
+        return registered_connectors.get(name).first();
     }
 
     /**
@@ -184,5 +195,77 @@ public class ServerManager {
      */
     public static boolean exist_encoder(String encoder_name) {
         return registered_encoders.containsKey(encoder_name);
+    }
+
+    //      SERVER STATUS
+
+    /// Ritorna {@code true} se il server è attivo, {@code false} se spento e non raggiungibile da nessun clients
+    public static boolean get_server_status() {
+        return server_status;
+    }
+
+    /**
+     * Chiude tutti i connectors e scollega tutti i clients dal sever notificando ognuno con {@code EOC}, "End Of
+     * Connection", imposta questo come spento permettendo la modifica di alcuni parametri come {@code LoginManager},
+     * {@code WorkerThreads}
+     */
+    public static void power_off() {
+        if (!server_status) { //il server è già spento
+            Logger.log("tentativo di spegnere il server mentre questo è già spento", true);
+            return;
+        }
+
+        for (Pair<ConnectorWrapper, Boolean> pair : registered_connectors.values()) {
+            if (pair.second()) { //spegne tutti i connector attivi e ignora quelli già spenti
+                pair.first().stop();
+                Logger.log("spento il connector: (" + pair.first().get_name() + ")");
+            }
+        }
+        Logger.log("stoppati tutti i connectors attivi");
+
+        ClientsInterface.disconnect_all();
+
+        server_status = false;
+        ClientsInterface.free_workers();
+    }
+
+    /**
+     * Attiva tutti i connector contrassegnati fra quelli registrati permettendo a nuovi clients di collegarsi, infine
+     * ripopola ClientsInterface con nuovi worker threads e imposta lo stato del server a {@code true}
+     * @return {@code true} se l'operazione è andata a buon fine e si è ora in attesa di connessioni dai clients.
+     * {@code false} se è fallita, e in tal caso viene mostrato un errore in {@code TempPanel}
+     */
+    public static boolean power_on() {
+        if (server_status) {
+            Logger.log("impossibile accendere il server, è già attivo", true);
+            TempPanel.show(new TempPanel_info(
+                    TempPanel_info.SINGLE_MSG,
+                    false,
+                    "impossibile accendere il server, già attivo"
+            ), null);
+            return false;
+        }
+
+        for (Pair<ConnectorWrapper, Boolean> pair : registered_connectors.values()) {
+            if (pair.second()) {
+                pair.first().start();
+                Logger.log("attivato il connector: (" + pair.first().get_name() + ")");
+            }
+        }
+        Logger.log("attivati tutti i connectors");
+
+        if (!ClientsInterface.populate_worker_threads()) {
+            Logger.log("impossibile popolare ClientsInterface con nuovi worker threads", true);
+            TempPanel.show(new TempPanel_info(
+                    TempPanel_info.SINGLE_MSG,
+                    false,
+                    "impostare un numero di worker threads > 0"
+            ), null);
+            return false;
+        }
+        Logger.log("ripopolato ClientsInterface con nuovi worker threads");
+
+        server_status = true;
+        return true;
     }
 }
