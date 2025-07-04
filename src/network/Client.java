@@ -28,20 +28,20 @@ public abstract class Client {
     private static final SecureRandom random = new SecureRandom();
 
     /// Vettore con tutti i {@code cc} bloccati da conversazioni in corso con questo client
-    private Vector<Byte> locked_cc = new Vector<>();
+    private final Vector<Byte> locked_cc = new Vector<>();
 
     /// Mappa fra i {@code cc} bloccati e un oggetto OnArrival da eseguire quando si riceverà una risposta dal client a questo {@code cc}
-    private Map<Byte, OnArrival> waiting_actions = new LinkedHashMap<>();
+    private final Map<Byte, OnArrival> waiting_actions = new LinkedHashMap<>();
 
     /// Mappa fra i {@code cc} bloccati e i Thread che attendono una risposta dal client a questi {@code cc}
-    private Map<Byte, Thread> waiting_threads = new LinkedHashMap<>();
+    private final Map<Byte, Thread> waiting_threads = new LinkedHashMap<>();
 
     /**
      * Una volta ricevuta una risposta a un {@code cc} a cui un Thread era in attesa, per passare il messaggio fra i due Thread
      * viene aggiunto a questa mappa legato al {@code cc}, il Thread in attesa una volta notificato legge e rimuove i dati da
      * questa mappa
      */
-    private Map<Byte, byte[]> thread_bridge = new LinkedHashMap<>();
+    private final Map<Byte, byte[]> thread_bridge = new LinkedHashMap<>();
 
     /// Nome con cui viene identificato questo client o temp id se non è ancora stato eseguito il login
     private String client_name;
@@ -343,7 +343,7 @@ public abstract class Client {
                 notify_reply_to(cc, msg);
             }
             else {
-//                ClientsInterface.received_msg_from(this, final_msg, cc);
+                ClientsInterface.process_client_message(new WorkData(this, msg, cc));
             }
         }
 
@@ -368,7 +368,7 @@ public abstract class Client {
         }
         else if (waiting_actions.containsKey(cc)) {
             OnArrival action = waiting_actions.get(cc);
-            action.on_arrival(this, cc, msg);
+            ClientsInterface.process_client_message(new WorkData(this, msg, cc, action));
         }
         else {
             //nessuna delle due mappe conteneva oggetti legati al cc
