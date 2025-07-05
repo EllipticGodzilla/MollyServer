@@ -31,7 +31,7 @@ public abstract class Logger {
     }
 
     public static synchronized void log(String txt, boolean error, char end, boolean print_date) {
-        byte[] new_line = (((error)? "! " : "  ") + (print_date? current_time() : "") + txt + end).getBytes();
+        byte[] new_line = (((error)? "! " : "  ") + (print_date? current_time() : "\t\t\t\t - ") + txt + end).getBytes();
 
         try {
             ostream.write(new_line);
