@@ -170,7 +170,7 @@ public abstract class LoginManager {
             return null;
         }
         else { //login fallito
-            Logger.log("il client: (" + client.get_name() + ") ha fallito la registrazione di un utente", true);
+            Logger.log("il client: (" + client.get_name() + ") ha fallito il login in un utente", true);
             client.send(("fail:" + result.second()).getBytes(), cc);
 
             return null;

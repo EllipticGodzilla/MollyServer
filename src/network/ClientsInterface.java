@@ -285,7 +285,16 @@ public abstract class ClientsInterface {
 
         //esegue il login del client
         Logger.log("attendo richiesta di login / registrazione dal client: (" + client.get_name() + ")");
-        if (ServerManager.get_login_manager().login_client(client)) {
+
+        LoginManager manager = ServerManager.get_login_manager();
+        if (manager == null) {
+            Logger.log("impossibile gestire il login dei clients, non è definito un LoginManager", true);
+            client.close();
+
+            return false;
+        }
+
+        if (manager.login_client(client)) {
             Logger.log("l'utente: (" + client.get_name() + ") è online");
             online_clients.get(connector_name).add(client);
             ClientList_panel.set_online(client.get_name());
@@ -727,10 +736,10 @@ public abstract class ClientsInterface {
         for (String line : file_lines) {
             String[] line_data = line.split(";");
 
-            if (line_data.length != 2) {
-                Logger.log("impossibile comprendere la linea: (" + line_data + ") durante la lettura delle credenziali per il LoginManager: (" + manager_name + ")", true);
+            if (line_data.length != 2 && !line.isBlank()) {
+                Logger.log("impossibile comprendere la linea: (" + line + ") durante la lettura delle credenziali per il LoginManager: (" + manager_name + ")", true);
             }
-            else {
+            else if (!line.isBlank()){
                 clients_credentials.put(
                         line_data[0],
                         Base64.getDecoder().decode(line_data[1])
