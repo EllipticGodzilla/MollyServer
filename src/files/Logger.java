@@ -15,7 +15,7 @@ public abstract class Logger {
             ostream.write("clear\n".getBytes());
 
             SimpleDateFormat start_format = new SimpleDateFormat("[yy/LL/dd]");
-            ostream.write(("================================== Server Started " + start_format.format(Calendar.getInstance()) + " ==================================").getBytes());
+            ostream.write(("================================== Server Started " + start_format.format(Calendar.getInstance().getTime()) + " ==================================\n").getBytes());
         }
         catch (Exception e) {
             System.out.println("impossibile inizializzare il logger, " + e.getMessage());

@@ -1,10 +1,12 @@
 package network.connection;
 
+import files.FileInterface;
 import files.Logger;
 import gui.ClientList_panel;
 import network.ServerManager;
 
 import javax.crypto.Cipher;
+import java.io.FileInputStream;
 import java.security.SecureRandom;
 import java.util.*;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -31,7 +33,7 @@ public abstract class ClientsInterface {
      * Array di Boolean che rispecchiano se il worker thread allo stesso index in {@code threads_workers} è attivo, ed
      * in tal caso vale {@code true}, o è in attesa di nuovo lavoro e vale {@code false}
       */
-    private static Boolean[] workers_status = new Boolean[0];
+    private static boolean[] workers_status = new boolean[0];
 
     /**
      * Queue con ordinamento FIFO in cui vengono inseriti tutti i dati dei messaggi da clients che ancora non sono stati
@@ -46,20 +48,22 @@ public abstract class ClientsInterface {
      * {@code > 0}, queue molto piccole potrebbero causare una perdita di messaggi poiché se alla ricezione di un
      * messaggio è piena questo verrà ignorato dal server.
      * <p>Questo paramento può essere modificato solo a server spento
+     *
      * @param size nuova capacità del backlog
-     * @return {@code true} se riesce a modificare la capacità del backlog, {@code false} se l'operazione fallisce
      */
-    public static boolean set_workers_backlog_capacity(int size) {
-        //todo if (server.is_online)
+    public static void set_workers_backlog_capacity(int size) {
+        if (ServerManager.is_online()) {
+            Logger.log("impossibile modificare la capacità del workers backlog con il server attivo", true);
+            return;
+        }
 
         if (size <= 0) {
             Logger.log("impossibile impostare la dimensione del backlog dei workers threads ad un numero negativo: " + size, true);
-            return false;
+            return;
         }
 
         workers_backlog = new ArrayBlockingQueue<>(size);
-        workers_status = new Boolean[size]; //viene inizializzato con tutti false, tutti i thread non sono attivi
-        return true;
+        workers_status = new boolean[size]; //viene inizializzato con tutti false, tutti i thread non sono attivi
     }
 
     /// Ritorna la capacità massima del backlog permesso per i worker threads
@@ -76,7 +80,7 @@ public abstract class ClientsInterface {
      * @param num intero {@code > 0} di worker threads da impostare
      */
     public static void set_workers_number(int num) {
-        if (ServerManager.get_server_status()) {
+        if (ServerManager.is_online()) {
             Logger.log("impossibile modificare il numero di worker threads a server attivo", true);
             return;
         }
@@ -102,13 +106,13 @@ public abstract class ClientsInterface {
     /**
      * All'accensione del server l array {@code threads_workers} sarà vuoto o conterrà threads vecchi e viene popolato
      * con una nuova generazione di threads.
-     * <p>Questa operazione può essere eseguita solo a server spento, e si deve aver specificato prima un numero
+     * <p>Questa operazione può essere eseguita solo a server acceso, e si deve aver specificato prima un numero
      * {@code > 0} di worker threads
      * @return {@code true} se l'operazione è andata a buon fine, {@code false} se il server è attivo o se il numero
      * di worker threads è impostato a {@code 0}
      */
     public static boolean populate_worker_threads() {
-        if (ServerManager.get_server_status()) {
+        if (!ServerManager.is_online()) {
             Logger.log("impossibile ripopolare i worker threads con il server attivo", true);
             return false;
         }
@@ -128,7 +132,7 @@ public abstract class ClientsInterface {
      * Utilizzabile solo una volta spento il server, altrimenti non avrà nessun effetto
      */
     public static void free_workers() {
-        if (ServerManager.get_server_status()) {
+        if (ServerManager.is_online()) {
             Logger.log("impossibile liberare tutti i thread worker finchè il server è attivo", true);
             return;
         }
@@ -602,6 +606,35 @@ public abstract class ClientsInterface {
         }
     }
 
+    /**
+     * Memorizza, per un nuovo utente appena registrato, il codice segreto legato a ogni utente e che viene utilizzato
+     * dal {@code LoginManager} per verificare la correttezza delle login request dei clients.
+     * Questo metodo viene invocato quando un {@code LoginManager} approva una register request a un client.
+     * <p>Il significato effettivo di {@code psw} dipende completamente dall'uso che ne fa il {@code LoginManager} che
+     * lo registra, infatti ogni {@code LoginManager} ha legato a se stesso gli utenti che si sono registrati con esso
+     * e di default questi non si possono condividere fra più {@code LoginManager}
+     * @param uname nome utente da registrare
+     * @param psw   codice segreto da legare all'utente
+     */
+    protected static void register_user(String uname, byte[] psw) {
+        if (clients_credentials.containsKey(uname)) {
+            Logger.log("impossibile registrare nuove credenziali per un utente già esistente", true);
+            return;
+        }
+
+        clients_credentials.put(uname, psw);
+    }
+
+    /**
+     * Ritorna il codice segreto registrato dal {@code LoginManager} alla creazione dell'utente {@code uname}, che
+     * dovrebbe essere utilizzato per verificare la correttezza di una login request
+     * @param uname nome dell'utente di cui si vogliono le credenziali
+     * @return credenziali dell'utente, o {@code null} se non trova un utente registrato con il nome {@code uname}
+     */
+    public static byte[] get_user_credential(String uname) {
+        return clients_credentials.get(uname);
+    }
+
     /// Sconnette tutti i clients dal server notificandoli con {@code EOC}, "End Of Connection"
     public static void disconnect_all() {
         for (Vector<Client> clients_vector : online_clients.values()) {
@@ -621,9 +654,44 @@ public abstract class ClientsInterface {
      * @param connector_name nome del connector
      */
     public static void disconnect_all(String connector_name) {
-        for (Client client : online_clients.get(connector_name)) {
+        Vector<Client> online = online_clients.get(connector_name);
+        if (online == null) { //nessun client online
+            return;
+        }
+
+        for (Client client : online) {
             client.send("EOC".getBytes());
             client.close();
         }
+
+        online_clients.remove(connector_name);
+    }
+
+    /**
+     * Se è impostato un LoginManager controlla che esista un file con path {@code /database/users_<name>.dat}
+     * dove {@code <name>} è il nome del LoginManager, in cui scriverà tutte le credenziali degli utenti registrati da
+     * questo, formattate con in ogni riga i dati di un solo utente, e ogni linea sarà nella forma:
+     * {@code <nome>;<Base64 encoded psw>}
+     */
+    public static void update_credential_file() {
+        LoginManager manager = ServerManager.get_login_manager();
+        if (manager == null) {
+            return;
+        }
+
+        String manager_file_name = "/database/users_" + manager.get_name().replace(' ', '_') + ".dat";
+        if (!FileInterface.exist(manager_file_name)) {
+            FileInterface.create_file(manager_file_name, true);
+        }
+
+        StringBuilder builder = new StringBuilder();
+
+        for (String client : clients_credentials.keySet()) {
+            builder .append(client)
+                    .append(Base64.getEncoder().encodeToString(clients_credentials.get(client)))
+                    .append('\n');
+        }
+
+        FileInterface.overwrite_file(manager_file_name, builder.toString().getBytes());
     }
 }

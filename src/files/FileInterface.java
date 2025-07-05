@@ -1,5 +1,7 @@
 package files;
 
+import network.connection.ClientsInterface;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
@@ -43,8 +45,9 @@ public abstract class FileInterface {
 
     /*
      * Inizializza jar_path trovando la posizione assoluta del progetto sul disco.
-     * Aggiunge alla lista di file updaters e loaders FileInterface::standard_updater e FileInterface::standard_loader
-     * che caricano informazioni e le aggiornano per i file presenti di base.
+     * Aggiunge tutti gli updaters dei files standard:
+     * 1) credenziali dei files per il LoginManager attivo
+     *
      * Controlla che i file necessari per il funzionamento base di Molly siano presenti
      */
     static {
@@ -52,10 +55,9 @@ public abstract class FileInterface {
         tmp_jar_path = tmp_jar_path.substring(0, tmp_jar_path.length() - 1); //rimuove l'ultimo /
         jar_path = tmp_jar_path.substring(0, tmp_jar_path.lastIndexOf('/')); //rimuove Molly.jar dalla fine della path
 
-        add_file_updater(FileInterface::standard_updater);
-        add_file_loader(FileInterface::standard_loader);
-
         check_essential_files();
+
+        add_file_loader(ClientsInterface::update_credential_file);
 
         Logger.init();
     }
@@ -68,28 +70,12 @@ public abstract class FileInterface {
             new File(jar_path + "/database/graphics/default.dat").createNewFile();
             new File(jar_path + "/database/certificate.dat").createNewFile();
             new File(jar_path + "/database/TerminalLog.dat").createNewFile();
-            new File(jar_path + "/database/clients_credentials.dat").createNewFile();
             new File(jar_path + "/mods").mkdir();
         }
         catch (IOException _) {
             System.out.println("impossibile creare cartelle o file in: " + jar_path);
             System.exit(0);
         }
-    }
-
-    //      STANDARD FILE UPDATER E LOADER
-
-    /**
-     * Aggiorna il contenuto dei file base
-     */
-    private static void standard_updater() {
-        StringBuilder user_credentials = new StringBuilder();
-//        for (String user : )
-            //todo
-    }
-
-    private static void standard_loader() {
-
     }
 
     //      FILE UPDATER/LOADER MANAGING

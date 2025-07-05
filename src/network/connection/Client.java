@@ -275,6 +275,10 @@ public abstract class Client {
         else if (notifier instanceof Thread thread) {
             waiting_threads.put(cc, thread);
         }
+        else if (notifier != null) {
+            Logger.log("impossibile registrare un azione ad un cc che non sia istanza di OnArrival o Thread", true);
+            return false;
+        }
 
         if (notifier != null && !locked_cc.contains(cc)) {
             locked_cc.add(cc);
@@ -360,6 +364,7 @@ public abstract class Client {
     private void notify_reply_to(byte cc, byte[] msg) {
         if (waiting_threads.containsKey(cc)) {
             Thread thread = waiting_threads.get(cc);
+            waiting_threads.remove(cc);
 
             thread_bridge.put(cc, msg);
             synchronized (thread) {
@@ -368,6 +373,8 @@ public abstract class Client {
         }
         else if (waiting_actions.containsKey(cc)) {
             OnArrival action = waiting_actions.get(cc);
+            waiting_actions.remove(cc);
+
             ClientsInterface.process_client_message(new WorkData(this, msg, cc, action));
         }
         else {

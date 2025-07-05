@@ -71,6 +71,9 @@ public class WorkerThread extends Thread {
      *         torna al punto {@code 2}
      *     </li>
      *     <li>
+     *         Controlla se il server è attivo e in tal caso continua nella lista, altrimenti interrompe il ciclo
+     *     </li>
+     *     <li>
      *         chiama {@code wait()} interrompendosi e attendendo che venga notificato per l'arrivo di un nuovo
      *         messaggio da processare.
      *         Una volta ricevuta la notifica ripartirà dal punto {@code 1}
@@ -93,7 +96,7 @@ public class WorkerThread extends Thread {
             }
 
             //se finisce il lavoro e il server è spento non attende nuovi messaggi ma termina
-            if (!ServerManager.get_server_status()) {
+            if (!ServerManager.is_online()) {
                 break;
             }
 
@@ -108,7 +111,7 @@ public class WorkerThread extends Thread {
                 break;
             }
         }
-        while (ServerManager.get_server_status());
+        while (ServerManager.is_online());
 
         Logger.log("un worker thread è stato spento");
     }

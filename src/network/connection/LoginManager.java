@@ -50,12 +50,22 @@ public abstract class LoginManager {
 
     /**
      * Specifica come controllare la validità delle informazioni ricevute per la registrazione. Nel caso in cui sia
-     * stata eseguita con successo dovrà ritornare una coppia {@code (true, uname)} dove uname è il nome utente,
-     * altrimenti {@code (false, emessage)} dove emessage è un messaggio di errore da mostrare al client.
+     * stata eseguita con successo dovrà ritornare una coppia {@code (psw, uname)} dove:
+     * <ul>
+     *     <li>
+     *         {@code uname : String} è il nome utente con cui si è registrato l'utente, o un messaggio di errore nel
+     *         caso non sia andata a buon fine
+     *     </li>
+     *     <li>
+     *         {@code psw : byte[]} è un codice segreto che verrà memorizzato e utilizzato per verificare successivi
+     *         login a questo utente. O {@code null} se l'operazione non è andata a buon fine
+     *     </li>
+     * </ul>
+     *
      * @param data dati per la registrazione
-     * @return coppia {@code (true, uname)} se è avvenuta con successo, altrimenti {@code (false, emessage)}
+     * @return coppia {@code (psw, uname)} se è avvenuta con successo, altrimenti {@code (null, emessage)}
      */
-    public abstract Pair<Boolean, String> register_tester(byte[] data);
+    public abstract Pair<byte[], String> register_tester(byte[] data);
 
     public LoginManager(String manager_name, String login_request, String register_request) {
         this.login_request = login_request.getBytes();
@@ -177,13 +187,14 @@ public abstract class LoginManager {
      * @return nome utente se la registrazione è andata a buon fine, {@code null} se è fallita
      */
     private String try_register(Client client, byte[] request, byte cc) {
-        byte[] request_data = Arrays.copyOfRange(request, 8, request.length);
+        byte[] request_data = Arrays.copyOfRange(request, 9, request.length);
 
-        Pair<Boolean, String> result = register_tester(request_data);
-        if (result.first() && !ClientsInterface.exist_user(result.second())) { //registrazione con successo
+        Pair<byte[], String> result = register_tester(request_data);
+        if (result.first() != null && !ClientsInterface.exist_user(result.second())) { //registrazione con successo
+            ClientsInterface.register_user(result.second(), result.first());
             return result.second();
         }
-        else if (result.first()) { //registrazione corretta ma esiste già un utente con questo nome
+        else if (result.first() != null) { //registrazione corretta ma esiste già un utente con questo nome
             Logger.log("il client: (" + client.get_name() + ") ha tentato di creare un utente con nome già esistente: (" + result.second() + ")", true);
             client.send("fail:nome utente già in uso".getBytes(), cc);
 

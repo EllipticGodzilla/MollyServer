@@ -21,7 +21,7 @@ public class ServerManager {
      * che rappresenta il suo status a server attivo, cioè {@code true} se è un connector da attivare con l'accensione
      * del server, {@code false} se è un connector da ignorare
      */
-    private static final Map<String, Pair<ConnectorWrapper, Boolean>> registered_connectors = new LinkedHashMap<>();
+    private static final Map<String, Pair<Connector, Boolean>> registered_connectors = new LinkedHashMap<>();
 
     /// Mappa fra il nome di ogni {@code Encoder} registrato e il constructor della sua classe
     private static final Map<String, Constructor<? extends Encoder>> registered_encoders = new LinkedHashMap<>();
@@ -94,18 +94,16 @@ public class ServerManager {
     /**
      * Aggiunge un nuovo {@code Connector} utilizzando i metodi specificati da una mod, viene registrato come connector
      * disattivato, cioè che a meno di interventi da parte dell'utente non verrà attivato all'accensione del server
-     * @param starter metodo per fare partire il {@code Connector}
-     * @param stopper metodo per stoppare il {@code Connector}
+     * @param connector istanza del connector da registrare
      * @param name nome del {@code Connector}
      */
-    public static void register_connector(Method starter, Method stopper, String name) {
+    public static void register_connector(Connector connector, String name) {
         if (registered_connectors.containsKey(name)) {
             Logger.log("impossibile registrare più di un connector con il nome: (" + name + ")", true);
             return;
         }
 
-        ConnectorWrapper wrapper = new ConnectorWrapper(starter, stopper, name);
-        registered_connectors.put(name, new Pair<>(wrapper, false));
+        registered_connectors.put(name, new Pair<>(connector, false));
         Logger.log("registrato un nuovo connector: (" + name + ")");
     }
 
@@ -123,7 +121,7 @@ public class ServerManager {
      * @param name nome del connector
      * @return oggetto {@code ConnectorWrapper} rappresentante il connector richiesto
      */
-    public static ConnectorWrapper get_connector(String name) {
+    public static Connector get_connector(String name) {
         return registered_connectors.get(name).first();
     }
 
@@ -200,7 +198,7 @@ public class ServerManager {
     //      SERVER STATUS
 
     /// Ritorna {@code true} se il server è attivo, {@code false} se spento e non raggiungibile da nessun clients
-    public static boolean get_server_status() {
+    public static boolean is_online() {
         return server_status;
     }
 
@@ -215,7 +213,7 @@ public class ServerManager {
             return;
         }
 
-        for (Pair<ConnectorWrapper, Boolean> pair : registered_connectors.values()) {
+        for (Pair<Connector, Boolean> pair : registered_connectors.values()) {
             if (pair.second()) { //spegne tutti i connector attivi e ignora quelli già spenti
                 pair.first().stop();
                 Logger.log("spento il connector: (" + pair.first().get_name() + ")");
@@ -246,7 +244,7 @@ public class ServerManager {
             return false;
         }
 
-        for (Pair<ConnectorWrapper, Boolean> pair : registered_connectors.values()) {
+        for (Pair<Connector, Boolean> pair : registered_connectors.values()) {
             if (pair.second()) {
                 pair.first().start();
                 Logger.log("attivato il connector: (" + pair.first().get_name() + ")");
@@ -254,6 +252,7 @@ public class ServerManager {
         }
         Logger.log("attivati tutti i connectors");
 
+        server_status = true;
         if (!ClientsInterface.populate_worker_threads()) {
             Logger.log("impossibile popolare ClientsInterface con nuovi worker threads", true);
             TempPanel.show(new TempPanel_info(
@@ -261,11 +260,52 @@ public class ServerManager {
                     false,
                     "impostare un numero di worker threads > 0"
             ), null);
+
+            power_off();
             return false;
         }
         Logger.log("ripopolato ClientsInterface con nuovi worker threads");
 
-        server_status = true;
         return true;
+    }
+
+    /**
+     * Imposta il connector registrato con il nome {@code name} come attivo, e se il server è acceso lo fa partire
+     * @param name nome del connector
+     */
+    public static void activate_connector(String name) {
+        Pair<Connector, Boolean> connector_pair = registered_connectors.get(name);
+        if (connector_pair == null) {
+            Logger.log("impossibile attivare il connector: (" + name + "), connector non esistente", true);
+            return;
+        }
+
+        Pair<Connector, Boolean> new_pair = new Pair<>(connector_pair.first(), true);
+        registered_connectors.put(name, new_pair);
+
+        if (server_status && !connector_pair.first().get_status()) {
+            new_pair.first().start();
+        }
+    }
+
+    /**
+     * Imposta il connector registrato con il nome {@code name} come disattivato, se il server è acceso lo stopperà e
+     * scollega tutti i client collegati attraverso di esso
+     * @param name nome del connector
+     */
+    public static void deactivate_connector(String name) {
+        Pair<Connector, Boolean> connector_pair = registered_connectors.get(name);
+        if (connector_pair == null) {
+            Logger.log("impossibile disattivare il connector: (" + name + "), connector non esistente", true);
+            return;
+        }
+
+        Pair<Connector, Boolean> new_pair = new Pair<>(connector_pair.first(), false);
+        registered_connectors.put(name, new_pair);
+
+        if (server_status && connector_pair.first().get_status()) {
+            connector_pair.first().stop();
+            ClientsInterface.disconnect_all(name);
+        }
     }
 }
