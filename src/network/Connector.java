@@ -1,4 +1,4 @@
-package network.connection;
+package network;
 
 /**
  * Istanze di questa classe vengono utilizzate per permettere al server di essere visibile ai clients. Viene attivato e

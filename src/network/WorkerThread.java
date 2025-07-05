@@ -1,7 +1,6 @@
-package network.connection;
+package network;
 
 import files.Logger;
-import network.ServerManager;
 
 import java.util.Arrays;
 import java.util.LinkedHashMap;

@@ -1,4 +1,4 @@
-package network.connection;
+package network;
 
 import files.Logger;
 

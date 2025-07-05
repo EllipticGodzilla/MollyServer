@@ -1,12 +1,10 @@
-package network.connection;
+package network;
 
 import files.FileInterface;
 import files.Logger;
 import gui.ClientList_panel;
-import network.ServerManager;
 
 import javax.crypto.Cipher;
-import java.io.FileInputStream;
 import java.security.SecureRandom;
 import java.util.*;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -694,5 +692,53 @@ public abstract class ClientsInterface {
         }
 
         FileInterface.overwrite_file(manager_file_name, builder.toString().getBytes());
+    }
+
+    /**
+     * Carica tutte le credenziali degli utenti registrati con un dato {@code LoginManager}, vengono memorizzate tutte
+     * in un file cifrato chiamato {@code database/users_<name>.dat}, dove <name> è il nome del login manager in cui si
+     * sostituiscono tutti gli spazi in "_".
+     * <p>È possibile caricare nuovi files solo a server spento.
+     * @param manager_name nome del manager di cui caricare le credenziali
+     */
+    public static boolean load_credential_file(String manager_name) {
+        Logger.log("inizio a caricare tutte le credenziali di utenti per il LoginManager: (" + manager_name + ")");
+        if (ServerManager.is_online()) {
+            Logger.log("impossibile caricare un nuovo file per le credenziali degli utenti mentre il server è online", true);
+            return false;
+        }
+
+        String file_name = "database/users_" + manager_name.replace(' ', '_') + ".dat";
+        if (!FileInterface.exist(file_name)) {
+            Logger.log("nessuna credenziale memorizzata");
+            return true;
+        }
+
+        byte[] data_bytes = FileInterface.read_file(file_name);
+        if (data_bytes == null) {
+            Logger.log("impossibile leggere il contenuto del file con le credenziali per il LoginManager: (" + manager_name + ")", true);
+            return false;
+        }
+        String data = new String(data_bytes);
+
+        clients_credentials.clear();
+
+        String[] file_lines = data.split("\n");
+        for (String line : file_lines) {
+            String[] line_data = line.split(";");
+
+            if (line_data.length != 2) {
+                Logger.log("impossibile comprendere la linea: (" + line_data + ") durante la lettura delle credenziali per il LoginManager: (" + manager_name + ")", true);
+            }
+            else {
+                clients_credentials.put(
+                        line_data[0],
+                        Base64.getDecoder().decode(line_data[1])
+                );
+            }
+        }
+
+        Logger.log("caricato un nuovo file con le credenziali degli utenti per il LoginManager: (" + manager_name + ")");
+        return true;
     }
 }

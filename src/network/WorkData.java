@@ -1,4 +1,4 @@
-package network.connection;
+package network;
 
 /**
  * L'azione da eseguire come risposta per ogni messaggio ricevuto dai client viene passata ai thread worker in

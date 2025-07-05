@@ -4,7 +4,7 @@ import files.annotations.*;
 import gui.ButtonTopBar_panel;
 import gui.custom.ButtonIcons;
 import gui.custom.ButtonInfo;
-import network.connection.OnArrival;
+import network.OnArrival;
 
 import javax.swing.*;
 import java.io.InputStream;

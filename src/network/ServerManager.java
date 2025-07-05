@@ -1,12 +1,12 @@
 package network;
 
+import files.FileInterface;
 import files.Logger;
 import files.Pair;
 import gui.temppanel.TempPanel;
 import gui.temppanel.TempPanel_info;
-import network.connection.*;
+
 import java.lang.reflect.Constructor;
-import java.lang.reflect.Method;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
@@ -56,12 +56,16 @@ public class ServerManager {
     }
 
     /**
-     * Prova a modificare il login manager attivo, per modificarlo il server deve essere spento.
+     * Prova a modificare il login manager attivo e caricare tutte le credenziali di clients registrati con esso, per
+     * modificarlo il server deve essere spento.
      * @param manager_name nome del nuovo manager da utilizzare
      * @return {@code true} se riesce a impostare il manager, {@code false} se il server è ancora attivo
      */
     public static boolean set_login_manager(String manager_name) {
-        //todo if (server.is_active())
+        if (is_online()) {
+            Logger.log("impossibile modificare il LoginManager quando il server è attivo", true);
+            return false;
+        }
 
         LoginManager manager = login_managers.get(manager_name);
         if (manager == null) {
@@ -69,8 +73,12 @@ public class ServerManager {
             return false;
         }
 
+        if (active_login_manager != null) { //salva le credenziali del vecchio LoginManager
+            ClientsInterface.update_credential_file();
+        }
+
         active_login_manager = manager;
-        return true;
+        return ClientsInterface.load_credential_file(manager_name);
     }
 
     /**

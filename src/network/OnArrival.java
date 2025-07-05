@@ -1,4 +1,4 @@
-package network.connection;
+package network;
 
 /**
  * Utilizzato nelle conversazioni con il server per registrare delle azioni da eseguire una volta ricevuto una

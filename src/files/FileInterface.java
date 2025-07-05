@@ -1,11 +1,10 @@
 package files;
 
-import network.connection.ClientsInterface;
+import network.ClientsInterface;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.Map;
 

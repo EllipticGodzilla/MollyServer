@@ -1,4 +1,4 @@
-package network.connection;
+package network;
 
 import files.Logger;
 import files.Pair;
@@ -133,7 +133,7 @@ public abstract class LoginManager {
 
             if (uname == null) { //login / registrazione fallita
                 Logger.log("il client: (" + client.get_name() + ") ha fallito un login / registrazione", true);
-                if (Client.DEBUGGING) { Logger.log("il client: (" + client.get_name() + ") ha fallito il login / registrazione:\n\t\t\t\t" + new String(request), true); }
+                if (Client.DEBUGGING) { Logger.log(new String(request), true, '\n', false); }
             }
             else { //login / registrazione riuscita
                 Logger.log("il client: (" + client.get_name() + ") è entrato nell'account: (" + uname + ")");
