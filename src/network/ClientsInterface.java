@@ -283,30 +283,11 @@ public abstract class ClientsInterface {
         //imposta l encoder per il client e inizia a utilizzare le conversazioni
         client.set_encoder(encoder);
 
-        //esegue il login del client
+        //fa partire il processo che permette al client di eseguire il login
         Logger.log("attendo richiesta di login / registrazione dal client: (" + client.get_name() + ")");
+        client.send("log_here".getBytes(), login_request_manager);
 
-        LoginManager manager = ServerManager.get_login_manager();
-        if (manager == null) {
-            Logger.log("impossibile gestire il login dei clients, non è definito un LoginManager", true);
-            client.close();
-
-            return false;
-        }
-
-        if (manager.login_client(client)) {
-            Logger.log("l'utente: (" + client.get_name() + ") è online");
-            online_clients.get(connector_name).add(client);
-            ClientList_panel.set_online(client.get_name());
-
-            return true;
-        }
-        else {
-            Logger.log("errore nell'attesa del login dal client: (" + client.get_name() + ")", true);
-            client.close();
-
-            return false;
-        }
+        return true;
     }
 
     /**
@@ -612,6 +593,70 @@ public abstract class ClientsInterface {
             return false;
         }
     }
+
+    /**
+     * Risponde a richieste di login o registrazione da un utente.
+     * <ul>
+     *     <li>
+     *         Se la richiesta inizia con "{@code login}" sarà una richiesta di login, formattata: "{@code login:dati}",
+     *         invoca {@code <LoginManager>.try_login()} con i dati ricevuti
+     *     </li>
+     *     <li>
+     *         Se la richiesta inizia con "{@code register}" sarà una richiesta di registrarsi, formattata:
+     *         "{@code register:dati}", invoca {@code <LoginManager>.try_register()} con i dati ricevuti
+     *     </li>
+     * </ul>
+     * I due metodi da <LoginManager> ritornano un stringa con il nome utente se la richiesta era valida, {@code null}
+     * se la richiesta non è valida.
+     * <p>In caso di richiesta fallita registra nuovamente se stesso come action per rispondere a successive richieste,
+     * altrimenti libera il {@code cc}
+     * @param client client che deve eseguire il login / registrazione
+     * @return {@code true} se è stato eseguito con successo, {@code false} se ha riscontrato un errore
+     */
+    private static final OnArrival login_request_manager = new OnArrival() {
+        @Override
+        public void on_arrival(Client client, byte conv_code, byte[] msg) {
+            LoginManager manager = ServerManager.get_login_manager();
+            if (manager == null) {
+                Logger.log("impossibile gestire il login degli utenti, non è impostato nessun login manager", true);
+                client.unlock_cc(conv_code);
+
+                return;
+            }
+
+            String uname;
+
+            if (Arrays.mismatch("login".getBytes(), msg) == 5) {
+                uname = manager.try_login(client, msg, conv_code);
+            }
+            else if (Arrays.mismatch("register".getBytes(), msg) == 8) {
+                uname = manager.try_register(client, msg, conv_code);
+            }
+            else {
+                Logger.log("il client: (" + client.get_name() + ") ha inviato una richiesta per login non valida: (" + new String(msg) + ")", true);
+                client.register_action(conv_code, this); //attende una nuova richiesta
+                return;
+            }
+
+            if (uname == null) { //login / registrazione fallita
+                Logger.log("il client: (" + client.get_name() + ") ha fallito un login / registrazione", true);
+                if (Client.DEBUGGING) { Logger.log(new String(msg), true, '\n', false); }
+
+                client.register_action(conv_code, this); //attende una nuova richiesta
+            }
+            else { //login / registrazione riuscita
+                Logger.log("il client: (" + client.get_name() + ") è entrato nell'account: (" + uname + ")");
+
+                client.send(("log:" + uname).getBytes(), conv_code);
+                client.set_uname(uname);
+
+                online_clients.get(client.get_connector_name()).add(client);
+                ClientList_panel.set_online(client.get_name());
+
+                client.unlock_cc(conv_code);
+            }
+        }
+    };
 
     /**
      * Memorizza, per un nuovo utente appena registrato, il codice segreto legato a ogni utente e che viene utilizzato

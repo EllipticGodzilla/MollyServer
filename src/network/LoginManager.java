@@ -90,63 +90,6 @@ public abstract class LoginManager {
     }
 
     /**
-     * Attende che il client esegua il login o si registri in un utente, per specificare a che cc inviare le richieste
-     * di login gli invia "{@code log_here}" e attende a quel cc le richieste.
-     * <ul>
-     *     <li>
-     *         Se la richiesta inizia con "{@code login}" sarà una richiesta di login, formattata: "{@code login:dati}",
-     *         invoca il login_tester con i dati ricevuti
-     *     </li>
-     *     <li>
-     *         Se la richiesta inizia con "{@code register}" sarà una richiesta di registrarsi, formattata:
-     *         "{@code register:dati}", invoca il register_tester con i dati ricevuti
-     *     </li>
-     * </ul>
-     * @param client client che deve eseguire il login / registrazione
-     * @return {@code true} se è stato eseguito con successo, {@code false} se ha riscontrato un errore
-     */
-    public boolean login_client(Client client) {
-        String uname;
-
-        //indica al client che cc utilizzare per eseguire il login
-        byte cc = client.send("log_here".getBytes(), null);
-        client.lock_cc(cc); //avendo action null non viene bloccato da send
-
-        //continua ad attendere tentativi di login / registrazioni finché non entra in un account
-        while (true) {
-            byte[] request = client.wait_for_reply(cc);
-            if (request == null) {
-                Logger.log("errore nell'attesa del messaggio di login dal client: (" + client.get_name() + ")", true);
-                return false;
-            }
-
-            if (Arrays.mismatch("login".getBytes(), request) == 5) {
-                uname = try_login(client, request, cc);
-            }
-            else if (Arrays.mismatch("register".getBytes(), request) == 8) {
-                uname = try_register(client, request, cc);
-            }
-            else {
-                Logger.log("il client: (" + client.get_name() + ") ha inviato una richiesta per login non valida: (" + new String(request) + ")", true);
-                return false;
-            }
-
-            if (uname == null) { //login / registrazione fallita
-                Logger.log("il client: (" + client.get_name() + ") ha fallito un login / registrazione", true);
-                if (Client.DEBUGGING) { Logger.log(new String(request), true, '\n', false); }
-            }
-            else { //login / registrazione riuscita
-                Logger.log("il client: (" + client.get_name() + ") è entrato nell'account: (" + uname + ")");
-
-                client.send(("log:" + uname).getBytes(), cc);
-                client.set_uname(uname);
-
-                return true;
-            }
-        }
-    }
-
-    /**
      * Prova a eseguire il login per il client con la richiesta ricevuto, le specifiche su come valutare i dati nella
      * richiesta dipendono da come è implementato il login manager. Una volta controllata la loro validità con il
      * metodo {@code login_tester()}, se è una richiesta valida, controlla se c'è già un client online registrato con
@@ -155,7 +98,7 @@ public abstract class LoginManager {
      * @param request informazioni per il login
      * @return nome utente se il login è riuscito, {@code null} se è fallito
      */
-    private String try_login(Client client, byte[] request, byte cc) {
+    public String try_login(Client client, byte[] request, byte cc) {
         byte[] request_data = Arrays.copyOfRange(request, 6, request.length);
 
         Pair<Boolean, String> result = login_tester(request_data);
@@ -186,7 +129,7 @@ public abstract class LoginManager {
      * @param request richiesta per il nuovo utente
      * @return nome utente se la registrazione è andata a buon fine, {@code null} se è fallita
      */
-    private String try_register(Client client, byte[] request, byte cc) {
+    public String try_register(Client client, byte[] request, byte cc) {
         byte[] request_data = Arrays.copyOfRange(request, 9, request.length);
 
         Pair<byte[], String> result = register_tester(request_data);

@@ -46,6 +46,9 @@ public abstract class Client {
     /// Nome con cui viene identificato questo client o temp id se non è ancora stato eseguito il login
     private String client_name;
 
+    /// Nome del connector che ha creato l'istanza del client
+    private final String connector_name;
+
     /// True se non è ancora eseguito il login e in {@code client_name} è scritto un temp id, false se è scritto il nome
     private boolean is_temp_id = true;
 
@@ -53,11 +56,35 @@ public abstract class Client {
     private Encoder encoder;
 
     /**
+     * Definisce come chiudere la connessione con un client, la specifica di questo metodo dipende dal Connector da cui
+     * arriva.
+     * Chiamare questo metodo mentre si è in ascolto deve portare {@code read_message()} a interrompersi e ritornare {@code null}
+     */
+    public abstract void close();
+
+    /**
+     * Attende e ritorna messaggi da parte del client, nel caso in cui durante l'attesa di un messaggio il client sia
+     * chiuso dovrà interrompersi e ritornare {@code null}.
+     * La specifica di questo metodo dipende dal Connector da cui arriva
+     * @return messaggio da parte del client, o {@code null} se il client è stato chiuso
+     */
+    public abstract byte[] read_message();
+
+    /**
+     * Invia un messaggio al server senza pensare a {@code cc} o encoder, l'implementazione di questo metodo dipende dal
+     * Connector da cui proviene
+     * @param msg messaggio da inviare al client
+     */
+    public abstract void direct_send(byte[] msg);
+
+    /**
      * Quando si crea una nuova istanza di un Client non è ancora stato eseguito il login, viene inizializzato con un
      * intero random che dovrebbe essere unico fra gli utenti non registrati e può essere inteso come id.
      * Una volta registrato e impostato il nome del Client non è possibile modificarlo
+     * @param connector_name nome del connector che ha creato questa istanza
      */
-    public Client() {
+    public Client(String connector_name) {
+        this.connector_name = connector_name;
         client_name = Integer.toString(new SecureRandom().nextInt());
     }
 
@@ -94,6 +121,11 @@ public abstract class Client {
         return client_name;
     }
 
+    /// Ritorna il nome del connector che ha creato questa istanza di {@code Client
+    public String get_connector_name() {
+        return connector_name;
+    }
+
     /**
      * Imposta il numero massimo di tentativi disponibili a generare un nuovo {@code cc} per una conversazione prima di fallire,
      * se impostato a -1 questo limite viene disabilitato
@@ -103,13 +135,6 @@ public abstract class Client {
     public static void set_max_cc_gen_try(int max_cc_gen_try) {
         MAX_CC_GEN_TRY = max_cc_gen_try;
     }
-
-    /**
-     * Invia un messaggio al server senza pensare a {@code cc} o encoder, l'implementazione di questo metodo dipende dal
-     * Connector da cui proviene
-     * @param msg messaggio da inviare al client
-     */
-    public abstract void direct_send(byte[] msg);
 
     /**
      * Invia un messaggio al client specificando conversation code e oggetto OnAction da eseguire una volta ricevuta
@@ -264,7 +289,7 @@ public abstract class Client {
      * @param notifier oggetto in attesa di risposta al {@code cc}
      * @return true se è riuscito a registrare action, false se ha trovato un altra azione legata a questo {@code cc}
      */
-    private boolean register_action(byte cc, Object notifier) {
+    public boolean register_action(byte cc, Object notifier) {
         if (waiting_threads.containsKey(cc) || waiting_actions.containsKey(cc)) {
             return false;
         }
@@ -308,14 +333,6 @@ public abstract class Client {
 
         return true;
     }
-
-    /**
-     * Attende e ritorna messaggi da parte del client, nel caso in cui durante l'attesa di un messaggio il client sia
-     * chiuso dovrà interrompersi e ritornare {@code null}.
-     * La specifica di questo metodo dipende dal Connector da cui arriva
-     * @return messaggio da parte del client, o {@code null} se il client è stato chiuso
-     */
-    public abstract byte[] read_message();
 
     /**
      * Continua ad attendere messaggi dal client, una volta ricevuto un messaggio e decifrato, a seconda del {@code cc}:
@@ -382,11 +399,4 @@ public abstract class Client {
             Logger.log("ricevuta una risposta a (" + client_name + ")[" + cc + "] ma nessun oggetto è in attesa", true);
         }
     }
-
-    /**
-     * Definisce come chiudere la connessione con un client, la specifica di questo metodo dipende dal Connector da cui
-     * arriva.
-     * Chiamare questo metodo mentre si è in ascolto deve portare {@code read_message()} a interrompersi e ritornare {@code null}
-     */
-    public abstract void close();
 }
