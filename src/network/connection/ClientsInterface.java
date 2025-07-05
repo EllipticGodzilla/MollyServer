@@ -679,7 +679,7 @@ public abstract class ClientsInterface {
             return;
         }
 
-        String manager_file_name = "/database/users_" + manager.get_name().replace(' ', '_') + ".dat";
+        String manager_file_name = "database/users_" + manager.get_name().replace(' ', '_') + ".dat";
         if (!FileInterface.exist(manager_file_name)) {
             FileInterface.create_file(manager_file_name, true);
         }
@@ -688,6 +688,7 @@ public abstract class ClientsInterface {
 
         for (String client : clients_credentials.keySet()) {
             builder .append(client)
+                    .append(';')
                     .append(Base64.getEncoder().encodeToString(clients_credentials.get(client)))
                     .append('\n');
         }

@@ -12,25 +12,29 @@ public abstract class FileCipher {
     private static Cipher encoder = null;
     private static Cipher decoder = null;
 
-    public static void init_ciphers(byte[] key_hash) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException, InvalidKeyException {
-        if (encoder == null && decoder == null) {
-            //utilizza i primi 32byte dell hash come key e iv per inizializzare AES
-            byte[] key_bytes = Arrays.copyOf(key_hash, 16);
-            byte[] iv_bytes = Arrays.copyOfRange(key_hash, 16, 32);
+    public static void init_ciphers(byte[] key_hash) {
+        if (encoder != null || decoder != null) {
+            Logger.log("impossibile inizializzare File_cipher più di una volta", true);
+            return;
+        }
 
-            SecretKey key = new SecretKeySpec(key_bytes, "AES");
-            IvParameterSpec iv = new IvParameterSpec(iv_bytes);
+        //utilizza i primi 32byte dell hash come key e iv per inizializzare AES
+        byte[] key_bytes = Arrays.copyOf(key_hash, 16);
+        byte[] iv_bytes = Arrays.copyOfRange(key_hash, 16, 32);
 
-            //inzializza encoder e decoder con key e iv appena calcolati
+        SecretKey key = new SecretKeySpec(key_bytes, "AES");
+        IvParameterSpec iv = new IvParameterSpec(iv_bytes);
+
+        //inzializza encoder e decoder con key e iv appena calcolati
+        try {
             encoder = Cipher.getInstance("AES/CBC/PKCS5Padding");
             decoder = Cipher.getInstance("AES/CBC/PKCS5Padding");
 
             encoder.init(Cipher.ENCRYPT_MODE, key, iv);
             decoder.init(Cipher.DECRYPT_MODE, key, iv);
             Logger.log("definiti i cipher per decifrare e cifrare i file correttamente");
-        }
-        else {
-            Logger.log("impossibile inizializzare File_cipher più di una volta", true);
+        } catch (Exception e) {
+            Logger.log("impossiblie inizializzare il file cipher", true);
         }
     }
 

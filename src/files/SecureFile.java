@@ -142,22 +142,16 @@ public class SecureFile {
      * @param data dati da scrivere nel file
      */
     protected void replace(byte[] data) {
-        try { //elimina il contenuto del file
-            new FileOutputStream(FILE, false).close();
-        }
-        catch (IOException _) {
-            Logger.log("errore nell'eliminare il contenuto del file: " + FILE.getAbsolutePath(), true);
-            return;
-        }
-
         //calcola i bytes da scrivere nel file
         byte[] new_data;
         if (is_encoded) { //se deve cifrare il testo
             try {
                 new_data = FileCipher.encode(data);
 
-                if (new_data == null) //non è ancora stato inizializzato File_cipher
+                if (new_data == null) { //non è ancora stato inizializzato File_cipher
+                    Logger.log("impossibile riscrivere il contenuto di: (" + FILE.getAbsolutePath() + "), FileCipher non è ancora inizializzato", true);
                     return;
+                }
             }
             catch (IllegalBlockSizeException | BadPaddingException _) {
                 Logger.log("impossibile decifrare il contenuto del file: " + FILE.getAbsolutePath(), true);
@@ -169,12 +163,13 @@ public class SecureFile {
             System.arraycopy(data, 0, new_data, 6, data.length);
         }
 
-        //scrive il contenuto nel file
-        try {
-            FOS.write(new_data);
+        try { //elimina il contenuto del file
+            FileOutputStream stream = new FileOutputStream(FILE, false);
+            stream.write(new_data);
+            stream.close();
         }
         catch (IOException _) {
-            Logger.log("impossibile scrivere nel file: " + FILE.getAbsolutePath(), true);
+            Logger.log("errore nell'eliminare il contenuto del file: " + FILE.getAbsolutePath(), true);
         }
     }
 

@@ -175,10 +175,10 @@ public abstract class FileInterface {
 
         if (file == null) {
             Logger.log("impossibile scrivere nel file: " + file_name + " file non esistente", true);
+            return;
         }
-        else {
-            file.replace(data);
-        }
+
+        file.replace(data);
     }
 
     public static boolean create_file(String file_name, boolean encoded) {
