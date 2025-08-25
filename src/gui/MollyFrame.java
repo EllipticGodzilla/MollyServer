@@ -61,8 +61,10 @@ public abstract class MollyFrame {
         content_panel.add(central_terminal, c);
 
         content_panel.setBounds(0, 0, 900, 663);
+
         MLayeredPane layeredPane = (MLayeredPane) molly_frame.getLayeredPane();
         layeredPane.add_fullscreen(content_panel, JLayeredPane.DEFAULT_LAYER);
+        //todo layeredPane.add_fullscreen(TempPanel.get_fog_panel(), JLayeredPane.DRAG_LAYER);
         layeredPane.add(temp_panel, JLayeredPane.POPUP_LAYER);
 
         Dimension screen_size = Toolkit.getDefaultToolkit().getScreenSize();

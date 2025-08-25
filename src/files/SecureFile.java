@@ -18,9 +18,12 @@ public class SecureFile {
 
     private final FileOutputStream FOS;
     private final File FILE;
+    private final String pathname;
 
     /// Wrapper che rappresenta un file già esistente
     protected SecureFile(String pathname) {
+        this.pathname = pathname;
+
         FileOutputStream temp_fos = null;
         File temp_file = null;
 
@@ -44,27 +47,17 @@ public class SecureFile {
      * @param pathname posizione del nuovo file
      * @param encoded true se si vuole cifrare il contenuto, false altrimenti
      */
-    protected SecureFile(String pathname, boolean encoded) {
+    protected SecureFile(String pathname, boolean encoded) throws IOException {
+        this.pathname = pathname;
         this.is_encoded = encoded;
         this.FILE = new File(pathname);
 
-        FileOutputStream temp_fos = null;
+        FILE.createNewFile();
+        FOS = new FileOutputStream(FILE);
 
-        try {
-            if (!FILE.createNewFile())
-                throw new IOException();
-
-            temp_fos = new FileOutputStream(FILE);
-
-            if (!encoded) {
-                temp_fos.write("clear\n".getBytes());
-            }
+        if (!encoded) {
+            FOS.write("clear\n".getBytes());
         }
-        catch (IOException _) {
-            Logger.log("impossibile creare il file: " + pathname, true);
-        }
-
-        FOS = temp_fos;
     }
 
     /**
@@ -72,6 +65,7 @@ public class SecureFile {
      * @param encode true per iniziare a cifrare il contenuto del file, false per smettere di cifrare
      */
     protected void set_encoded(boolean encode) {
+        Logger.log("imposto la sicurezza del file: (" + pathname + ") in: " + (encode? "encoded" : "clear"));
         this.is_encoded = encode;
     }
 

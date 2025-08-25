@@ -74,7 +74,7 @@ public class MollySettingsPanel implements SettingsPanel {
 
     public static boolean add_item(String path, SettingsPanel panel, ActionListener ok_listener, ActionListener apply_listener) {
         CascateAction action = _ -> {
-            if (visible_panel != null) {
+            if (visible_panel != null) { //un altro pannello è gia visibile
                 visible_panel.close();
                 main_panel.remove(2); //il secondo componente di main_panel è sempre il pannello visibile
             }

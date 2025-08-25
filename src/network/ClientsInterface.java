@@ -720,18 +720,20 @@ public abstract class ClientsInterface {
     }
 
     /**
-     * Se è impostato un LoginManager controlla che esista un file con path {@code /database/users_<name>.dat}
-     * dove {@code <name>} è il nome del LoginManager, in cui scriverà tutte le credenziali degli utenti registrati da
-     * questo, formattate con in ogni riga i dati di un solo utente, e ogni linea sarà nella forma:
-     * {@code <nome>;<Base64 encoded psw>}
+     * Se è impostato un LoginManager controlla che esista un file con path
+     * {@code /database/users/credentials_<name>.dat} dove {@code <name>} è il nome del LoginManager, in cui scriverà
+     * tutte le credenziali degli utenti registrati da questo, formattate con in ogni riga i dati di un solo utente, e
+     * ogni linea sarà nella forma: {@code <nome>;<Base64 encoded psw>}
      */
     public static void update_credential_file() {
+        Logger.log("salvo le credenziali del login manager attivo");
         LoginManager manager = ServerManager.get_login_manager();
         if (manager == null) {
+            Logger.log("nessun login manager è impostato come attivo", true);
             return;
         }
 
-        String manager_file_name = "database/users_" + manager.get_name().replace(' ', '_') + ".dat";
+        String manager_file_name = "database/users/credentials_" + manager.get_name().replace(' ', '_') + ".dat";
         if (!FileInterface.exist(manager_file_name)) {
             FileInterface.create_file(manager_file_name, true);
         }
@@ -746,12 +748,13 @@ public abstract class ClientsInterface {
         }
 
         FileInterface.overwrite_file(manager_file_name, builder.toString().getBytes());
+        Logger.log("salvate le credenziali del manager attivo nel file: (" + manager_file_name + ")");
     }
 
     /**
      * Carica tutte le credenziali degli utenti registrati con un dato {@code LoginManager}, vengono memorizzate tutte
-     * in un file cifrato chiamato {@code database/users_<name>.dat}, dove <name> è il nome del login manager in cui si
-     * sostituiscono tutti gli spazi in "_".
+     * in un file cifrato chiamato {@code database/users/credentials_<name>.dat}, dove <name> è il nome del login
+     * manager in cui si sostituiscono tutti gli spazi in "_".
      * <p>È possibile caricare nuovi files solo a server spento.
      * @param manager_name nome del manager di cui caricare le credenziali
      */
@@ -762,7 +765,7 @@ public abstract class ClientsInterface {
             return false;
         }
 
-        String file_name = "database/users_" + manager_name.replace(' ', '_') + ".dat";
+        String file_name = "database/users/credentials_" + manager_name.replace(' ', '_') + ".dat";
         if (!FileInterface.exist(file_name)) {
             Logger.log("nessuna credenziale memorizzata");
             return true;
@@ -770,7 +773,7 @@ public abstract class ClientsInterface {
 
         byte[] data_bytes = FileInterface.read_file(file_name);
         if (data_bytes == null) {
-            Logger.log("impossibile leggere il contenuto del file con le credenziali per il LoginManager: (" + manager_name + ")", true);
+            Logger.log("impossibile leggere il contenuto del file: (" + file_name + ")", true);
             return false;
         }
         String data = new String(data_bytes);
@@ -782,7 +785,7 @@ public abstract class ClientsInterface {
             String[] line_data = line.split(";");
 
             if (line_data.length != 2 && !line.isBlank()) {
-                Logger.log("impossibile comprendere la linea: (" + line + ") durante la lettura delle credenziali per il LoginManager: (" + manager_name + ")", true);
+                Logger.log("impossibile comprendere la linea: (" + line + ") nel file: (" + file_name + ")", true);
             }
             else if (!line.isBlank()){
                 clients_credentials.put(
@@ -792,7 +795,7 @@ public abstract class ClientsInterface {
             }
         }
 
-        Logger.log("caricato un nuovo file con le credenziali degli utenti per il LoginManager: (" + manager_name + ")");
+        Logger.log("caricate tutte le credenziali registrate con il login manager: (" + manager_name + ")");
         return true;
     }
 }

@@ -1,6 +1,8 @@
 package files;
 
 import network.ClientsInterface;
+import network.LoginManager;
+import network.ServerManager;
 
 import java.io.File;
 import java.io.IOException;
@@ -54,27 +56,15 @@ public abstract class FileInterface {
         tmp_jar_path = tmp_jar_path.substring(0, tmp_jar_path.length() - 1); //rimuove l'ultimo /
         jar_path = tmp_jar_path.substring(0, tmp_jar_path.lastIndexOf('/')); //rimuove Molly.jar dalla fine della path
 
-        check_essential_files();
-
-        add_file_loader(ClientsInterface::update_credential_file);
+        add_file_updater(ClientsInterface::update_credential_file);
+        add_file_loader(() -> {
+            LoginManager manager = ServerManager.get_login_manager();
+            if (manager != null) {
+                ClientsInterface.load_credential_file(manager.get_name());
+            }
+        });
 
         Logger.init();
-    }
-
-    /// Controlla ci siano tutti i files necessari per il funzionamento base di Molly, nel caso manchi qualcuno lo crea
-    private static void check_essential_files() {
-        try {
-            new File(jar_path + "/database").mkdir();
-            new File(jar_path + "/database/graphics").mkdir();
-            new File(jar_path + "/database/graphics/default.dat").createNewFile();
-            new File(jar_path + "/database/certificate.dat").createNewFile();
-            new File(jar_path + "/database/TerminalLog.dat").createNewFile();
-            new File(jar_path + "/mods").mkdir();
-        }
-        catch (IOException _) {
-            System.out.println("impossibile creare cartelle o file in: " + jar_path);
-            System.exit(0);
-        }
     }
 
     //      FILE UPDATER/LOADER MANAGING
@@ -128,6 +118,21 @@ public abstract class FileInterface {
                 add_file(file);
             }
         }
+
+        check_essential_files();
+    }
+
+    /// Controlla ci siano tutti i files necessari per il funzionamento base di Molly, nel caso manchi qualcuno lo crea
+    private static void check_essential_files() {
+        new File(jar_path + "/database").mkdir();
+        new File(jar_path + "/database/graphics").mkdir();
+        new File(jar_path + "/database/users").mkdir();
+        new File(jar_path + "/mods").mkdir();
+
+        create_file("database/graphics/default.dat", false);
+        create_file("database/users/default.dat", false);
+        create_file("database/certificate.dat", false);
+        create_file("database/TerminalLog.dat", false);
     }
 
     private static void search_folder(File folder) {
@@ -180,13 +185,35 @@ public abstract class FileInterface {
         file.replace(data);
     }
 
+    /**
+     * Crea un nuovo file accessibile da FileInterface specificando se cifrare il contenuto in esso o meno. Nel caso
+     * in cui esista già un file con stesso nome e sicurezza questo comando verrà ignorato, se esiste già il file ma
+     * il livello di sicurezza è diverso verrà modificato.
+     * @param file_name relative path del file da creare, ex: {@code database/graphics/default.dat}
+     * @param encoded {@code true} se il contenuto deve essere cifrato, {@code false} se viene lasciato in chiaro
+     * @return {@code true} se ha creato o cambiato la sicurezza con successo del nuovo file, {@code false} se non è
+     * possibile creare il nuovo file
+     */
     public static boolean create_file(String file_name, boolean encoded) {
-        if (loaded_files.containsKey(file_name)) { //se esiste già un file con questo nome
-            Logger.log("impossibile creare il file: " + file_name + ", esiste già un file con questo nome", true);
+        if (loaded_files.containsKey(file_name) && (loaded_files.get(file_name).is_protected() == encoded)) { //se esiste già un file con questo nome e sicurezza
+            return true;
+        }
+        else if (loaded_files.containsKey(file_name)) { //modifica la sicurezza del file già esistente
+            loaded_files.get(file_name).set_encoded(encoded);
+            return true;
+        }
+
+        try {
+            SecureFile new_file = new SecureFile(jar_path + "/" + file_name, encoded);
+            loaded_files.put(file_name, new_file);
+        }
+        catch (IOException e) {
+            Logger.log("impossibile creare un nuovo file: (" + file_name + ") con sicurezza: (" + (encoded? "encoded" : "clear") + ")");
+            Logger.log(e.getMessage(), false, '\n', false);
+
             return false;
         }
 
-        loaded_files.put(file_name, new SecureFile(jar_path + "/" + file_name, encoded));
         return true;
     }
 

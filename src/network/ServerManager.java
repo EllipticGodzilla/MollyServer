@@ -58,10 +58,13 @@ public class ServerManager {
     /**
      * Prova a modificare il login manager attivo e caricare tutte le credenziali di clients registrati con esso, per
      * modificarlo il server deve essere spento.
+     * <p>Se era già impostato un login manager salva le credenziali dei suoi utenti prima di cambiarlo
      * @param manager_name nome del nuovo manager da utilizzare
      * @return {@code true} se riesce a impostare il manager, {@code false} se il server è ancora attivo
      */
     public static boolean set_login_manager(String manager_name) {
+        Logger.log("provo a modificare il login manager attivo in: (" + manager_name + ")");
+
         if (is_online()) {
             Logger.log("impossibile modificare il LoginManager quando il server è attivo", true);
             return false;
@@ -69,7 +72,7 @@ public class ServerManager {
 
         LoginManager manager = login_managers.get(manager_name);
         if (manager == null) {
-            Logger.log("impossibile impostare il login manager: (" + manager_name + ") come attivo, manager non trovato", true);
+            Logger.log("impossibile trovare un manager registrato con il nome: (" + manager_name + ")", true);
             return false;
         }
 
@@ -78,6 +81,8 @@ public class ServerManager {
         }
 
         active_login_manager = manager;
+        Logger.log("impostato il login manager: (" + manager_name + ") come attivo");
+
         return ClientsInterface.load_credential_file(manager_name);
     }
 
@@ -95,6 +100,26 @@ public class ServerManager {
      */
     public static Set<String> get_available_login_managers() {
         return login_managers.keySet();
+    }
+
+    /**
+     * Se il server è spento legge il nome del manager da utilizzare di default dal file
+     * {@code database/users/default.dat} e lo imposta come login manager attivo, se un altro login manager era
+     * impostato salverà prima le sue credenziali.
+     * <p>Se il server è attivo non è possibile modificare il login manager e non farà nulla
+     * @return {@code true} se il login manager è stato modificato con successo, altrimenti {@code false}
+     */
+    public static boolean use_default_login_manager() {
+        Logger.log("cerco di impostare il login manager default come attivo");
+
+        byte[] data = FileInterface.read_file("database/users/default.dat");
+        if (data == null) {
+            Logger.log("impossibile leggere il contenuto del file: database/users/default.dat", true);
+
+            return false;
+        }
+
+        return set_login_manager(new String(data));
     }
 
     //      METODI IO PER LE MAPPE CONNECTOR E ENCODER
@@ -218,6 +243,12 @@ public class ServerManager {
     public static void power_off() {
         if (!server_status) { //il server è già spento
             Logger.log("tentativo di spegnere il server mentre questo è già spento", true);
+            TempPanel.show(new TempPanel_info(
+                    TempPanel_info.SINGLE_MSG,
+                    false,
+                    "impossibile spegnere il server, è già spento"
+            ), null);
+
             return;
         }
 
@@ -236,13 +267,13 @@ public class ServerManager {
     }
 
     /**
-     * Attiva tutti i connector contrassegnati fra quelli registrati permettendo a nuovi clients di collegarsi, infine
+     * Accende tutti i connector attivi fra quelli registrati permettendo a nuovi clients di collegarsi, infine
      * ripopola ClientsInterface con nuovi worker threads e imposta lo stato del server a {@code true}
      * @return {@code true} se l'operazione è andata a buon fine e si è ora in attesa di connessioni dai clients.
      * {@code false} se è fallita, e in tal caso viene mostrato un errore in {@code TempPanel}
      */
     public static boolean power_on() {
-        if (server_status) {
+        if (server_status) { //il server è già attivo
             Logger.log("impossibile accendere il server, è già attivo", true);
             TempPanel.show(new TempPanel_info(
                     TempPanel_info.SINGLE_MSG,
@@ -252,15 +283,11 @@ public class ServerManager {
             return false;
         }
 
-        for (Pair<Connector, Boolean> pair : registered_connectors.values()) {
-            if (pair.second()) {
-                pair.first().start();
-                Logger.log("attivato il connector: (" + pair.first().get_name() + ")");
-            }
-        }
-        Logger.log("attivati tutti i connectors");
+        power_on_connectors();
+        Logger.log("accesi tutti i connectors");
+        server_status = true; //impostato ora altrimenti in caso di errore con i worker threads power_off() fallisce
 
-        server_status = true;
+        //tenta di popolare la pool con worker threads
         if (!ClientsInterface.populate_worker_threads()) {
             Logger.log("impossibile popolare ClientsInterface con nuovi worker threads", true);
             TempPanel.show(new TempPanel_info(
@@ -272,9 +299,33 @@ public class ServerManager {
             power_off();
             return false;
         }
-        Logger.log("ripopolato ClientsInterface con nuovi worker threads");
+        Logger.log("ripopolato il server con nuovi worker threads");
 
         return true;
+    }
+
+    /**
+     * Nel processo di accendere il server accende tutti i connectors rendendosi visibile alla rete e i clients
+     */
+    private static void power_on_connectors() {
+        boolean no_connector = true; //se non ha connector attivi mostra un avviso
+
+        for (Pair<Connector, Boolean> pair : registered_connectors.values()) {
+            if (pair.second()) { //il connector è attivo
+                pair.first().start();
+                Logger.log("acceso il connector: (" + pair.first().get_name() + ")");
+
+                no_connector = false;
+            }
+        }
+
+        if (no_connector) { //nessun connector è attivo
+            TempPanel.show(new TempPanel_info(
+                    TempPanel_info.SINGLE_MSG,
+                    false,
+                    "il server è acceso ma nessun connector è attivo"
+            ), null);
+        }
     }
 
     /**

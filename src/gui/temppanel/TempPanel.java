@@ -28,6 +28,9 @@ abstract public class TempPanel {
     private static Vector<Pair<TempPanel_info, Object>> queue = new Vector<>();
 
     private static JPanel temp_panel = null; //temp panel
+    //fog panel utilizzato quando si vuole bloccare tutte le operazioni finché non si chiude il temp panel
+    private static final JPanel fog_panel = new JPanel();
+
     private static final JPanel TXT_PANEL = new JPanel(); //pannello che contiene le txt area
     private static boolean visible = false;
     private static boolean accept_esc_or_enter = false; //se possono essere utilizzati i tasti esc o invio al posto di premere i bottoni annulla, ok
@@ -40,6 +43,8 @@ abstract public class TempPanel {
             TXT_PANEL.setLayout(new GridBagLayout());
             TXT_PANEL.setOpaque(false);
             TXT_PANEL.setBorder(null);
+
+            //todo imposta il fog panel con uno sfondo semitrasparente e fai in modo che i pulsanti non siano attivi quando questo è visibile
 
             //imposta i colori e le icone dei pulsanti
             update_colors();
@@ -99,10 +104,29 @@ abstract public class TempPanel {
             c.gridx = 1;
             temp_panel.add(OK_BUTTON, c);
         }
+
         return temp_panel;
     }
 
+    /**
+     * Quando si mostra un messaggio con TempPanel è possibile richiedere che tutte le operazioni sul main frame siano
+     * interrotte, questo pannello viene reso visibile al di sopra di esso bloccando tutte le interazioni.
+     * @return JPanel utilizzato per bloccare le interazioni con il main frame
+     */
+    public static JPanel get_fog_panel() {
+        return fog_panel;
+    }
+
     public static void update_colors() {
+        Color fog_background_noalpha = (Color) GraphicsSettings.active_theme().get_value("temp_panel_fog_background");
+        Color fog_background = new Color( //aggiunge alpha
+                fog_background_noalpha.getRed(),
+                fog_background_noalpha.getGreen(),
+                fog_background_noalpha.getBlue(),
+                30
+        );
+        fog_panel.setBackground(fog_background);
+
         temp_panel.setBackground((Color) GraphicsSettings.active_theme().get_value("frame_background"));
         temp_panel.setBorder((Border) GraphicsSettings.active_theme().get_value(("temp_panel_border")));
 

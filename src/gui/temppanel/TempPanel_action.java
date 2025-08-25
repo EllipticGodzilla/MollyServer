@@ -2,9 +2,9 @@ package gui.temppanel;
 
 import java.util.Vector;
 
-public class TempPanel_action {
+public abstract class TempPanel_action {
     public Vector<Object> input = new Vector<>();
 
-    public void success() {}
-    public void annulla() {}
+    public abstract void success();
+    public void annulla() {} //di default non fa nulla
 }
