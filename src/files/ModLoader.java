@@ -4,10 +4,11 @@ import files.annotations.*;
 import gui.ButtonTopBar_panel;
 import gui.custom.ButtonIcons;
 import gui.custom.ButtonInfo;
-import network.OnArrival;
+import network.*;
 
 import javax.swing.*;
 import java.io.InputStream;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.*;
 import java.util.zip.ZipEntry;
@@ -25,7 +26,9 @@ public class ModLoader extends ClassLoader {
     private static final Vector<Class<?>> button_definer = new Vector<>(),
                                           encoder_definer = new Vector<>(),
                                           connector_definer = new Vector<>(),
-                                          prefix_definer = new Vector<>();
+                                          prefix_definer = new Vector<>(),
+                                          login_definer = new Vector<>();
+
     //classifica i metodi in classi con annotation RunAtStart in base a quando dovranno essere chiamati
     private static final Vector<Method> instant_running = new Vector<>(),
                                         encoded_running = new Vector<>(),
@@ -127,7 +130,7 @@ public class ModLoader extends ClassLoader {
         if (entry_class.isAnnotationPresent(ButtonSpec.class)) {
             button_definer.add(entry_class);
         }
-        else if (entry_class.isAnnotationPresent(Connector.class)) {
+        else if (entry_class.isAnnotationPresent(ConnectorDefinition.class)) {
             connector_definer.add(entry_class);
         }
         else if (entry_class.isAnnotationPresent(EncoderDefinition.class)) {
@@ -135,6 +138,9 @@ public class ModLoader extends ClassLoader {
         }
         else if (entry_class.isAnnotationPresent(Prefix.class)) {
             prefix_definer.add(entry_class);
+        }
+        else if (entry_class.isAnnotationPresent(LoginManagerDefinition.class)) {
+            login_definer.add(entry_class);
         }
         else if (entry_class.isAnnotationPresent(RunAtStart.class)) {
             add_runnuble_methods(entry_class);
@@ -189,14 +195,40 @@ public class ModLoader extends ClassLoader {
             load_button(entry_class, mod_name);
         }
         for (Class<?> entry_class : encoder_definer) {
-//            load_encoder(entry_class);
+            load_encoder(entry_class);
         }
         for (Class<?> entry_class : connector_definer) {
-//            load_encoder(entry_class);
+            load_connector(entry_class);
         }
         for (Class<?> entry_class : prefix_definer) {
             load_prefix(entry_class, mod_name);
         }
+        for (Class<?> entry_class : login_definer) {
+            load_loginner(entry_class);
+        }
+    }
+
+    public static void load_loginner(Class<?> login_class) {
+        Logger.log("registro un nuovo login manager dalla classe: (" + login_class.getName() + ")");
+        String name = login_class.getAnnotation(LoginManagerDefinition.class).name();
+
+        if (!LoginManager.class.isAssignableFrom(login_class)) {
+            Logger.log("la classe: (" + login_class.getName() + ") con annotation: (LoginMangerDefinition) non è estensione di LoginManager", true);
+            return;
+        }
+
+        LoginManager instance;
+        try {
+            instance = (LoginManager) login_class.getConstructor().newInstance();
+        }
+        catch (Exception e) {
+            Logger.log("impossibile creare una nuova istanza della classe: (" + login_class.getName() + ") e registrare un nuovo login manager", true);
+            Logger.log(e.getMessage(), true, '\n', false);
+            return;
+        }
+
+        ServerManager.register_login_manager(name, instance);
+        Logger.log("registrato un nuovo login manager dalla classe: (" + login_class.getName() + ") con successo");
     }
 
     public static void load_prefix(Class<?> conversation_class, String mod_name) {
@@ -259,7 +291,7 @@ public class ModLoader extends ClassLoader {
         }
 
         if (onPress == null || stop == null) {
-            Logger.log("non è stato trovato il modulo OnPress o OnStop o IconsSpec per il pulsante: " + name, true);
+            Logger.log("non è stato trovato il metodo OnPress o OnStop o IconsSpec per il pulsante: " + name, true);
             return;
         }
 
@@ -269,119 +301,59 @@ public class ModLoader extends ClassLoader {
         Logger.log("aggiunto con successo il pulsante: " + name + " alla top bar");
     }
 
-    //todo load_encoder e load_connector
-//    public static void load_encoder(Class<?> encoder_class) {
-//        Logger.log("registro un nuovo encoder dalla classe: " + encoder_class.getName());
-//
-//        String name = encoder_class.getAnnotation(EncoderDefinition.class).name();
-//        Method initializer = null, encoder = null, decoder = null;
-//
-//        for (Method method : encoder_class.getMethods()) {
-//            if (method.isAnnotationPresent(EncoderDefinition.Initializer.class) && initializer == null) {
-//                initializer = method;
-//            }
-//            else if (method.isAnnotationPresent(EncoderDefinition.Encoder.class) && encoder == null) {
-//                encoder = method;
-//            }
-//            else if (method.isAnnotationPresent(EncoderDefinition.Decoder.class) && decoder == null) {
-//                decoder = method;
-//            }
-//
-//            //quando ha inizializzato tutti i metodi smette di cercarne altri
-//            if (initializer != null && encoder != null && decoder != null) {
-//                break;
-//            }
-//        }
-//
-//        //non è riuscito a inizializzare tutti i metodi
-//        if (initializer == null || encoder == null || decoder == null) {
-//            Logger.log("nella classe: " + encoder_class.getName() + " non sono specificati tutti i metodi necessari", true);
-//
-//            if (initializer == null) {
-//                Logger.log("initializer non specificato", true);
-//            }
-//            if (encoder == null) {
-//                Logger.log("encoder non specificato", true);
-//            }
-//            if (decoder == null) {
-//                Logger.log("decoder non specificato", true);
-//            }
-//
-//            return;
-//        }
-//
-//        int array_size = encoder_class.getAnnotation(EncoderDefinition.class).array_size();
-//
-//        EncodersWrapper info = new EncodersWrapper(name, initializer, array_size, encoder, decoder);
-//        ServerInterface.add_encoder(name, info);
-//    }
-//
-//    public static void load_connector(Class<?> connector_class) {
-//        Logger.log("aggiungo un nuovo connector dalla classe: " + connector_class.getName());
-//        Connector annotation = connector_class.getAnnotation(Connector.class);
-//        String connector_name = annotation.name();
-//
-//        if (annotation.type() == ConnectorWrapper.DNS_CONNECTOR) {
-//            Method handshake_method = null;
-//
-//            for (Method method : connector_class.getMethods()) {
-//                if (method.isAnnotationPresent(Connector.handshake.class)) {
-//                    handshake_method = method;
-//                    break;
-//                }
-//            }
-//
-//            if (handshake_method == null) {
-//                Logger.log("per il connector: (" + connector_name + ") non è stato registrato nessun metodo per gestire l'handshake", true);
-//                return;
-//            }
-//
-//            ConnectorWrapper wrapper = new ConnectorWrapper(connector_name, handshake_method);
-//            ServerInterface.add_connector(connector_name, wrapper);
-//        }
-//        else {
-//            Method  handshake = null,
-//                    sender = null,
-//                    reader = null,
-//                    closer = null;
-//
-//            for (Method method : connector_class.getMethods()) {
-//                if (method.isAnnotationPresent(Connector.handshake.class) && handshake == null) {
-//                    handshake = method;
-//                }
-//                else if (method.isAnnotationPresent(Connector.reader.class) && reader == null) {
-//                    reader = method;
-//                }
-//                else if (method.isAnnotationPresent(Connector.sender.class) && sender == null) {
-//                    sender = method;
-//                }
-//                else if (method.isAnnotationPresent(Connector.closer.class) && closer == null) {
-//                    closer = method;
-//                }
-//
-//                if (handshake != null && reader != null && sender != null && closer != null) {
-//                    break;
-//                }
-//            }
-//
-//            if (handshake == null || sender == null || reader == null || closer == null) {
-//                Logger.log("per il connector: (" + connector_name + ") non sono stati specificati tutti i metodi necessari", true);
-//
-//                if (handshake == null) {
-//                    Logger.log("handshake non specificato", true);
-//                }
-//                if (sender == null) {
-//                    Logger.log("sender non specificato", true);
-//                }
-//                if (closer == null) {
-//                    Logger.log("closer non specificato", true);
-//                }
-//
-//                return;
-//            }
-//
-//            ConnectorWrapper wrapper = new ConnectorWrapper(connector_name, handshake, sender, reader, closer);
-//            ServerInterface.add_connector(connector_name, wrapper);
-//        }
-//    }
+    /**
+     * Data una classe con annotation {@code @EncoderDefinition} controlla che questa sia un estensione di
+     * {@code Encoder} e in caso recupera il suo constructor e lo registra in {@code ServerManager}
+     * @param encoder_class classe da registrare
+     */
+    public static void load_encoder(Class<?> encoder_class) {
+        Logger.log("registro un nuovo encoder dalla classe: " + encoder_class.getName());
+        String name = encoder_class.getAnnotation(EncoderDefinition.class).name();
+
+        if (!Encoder.class.isAssignableFrom(encoder_class)) {
+            Logger.log("la classe: (" + encoder_class.getName() + ") non è estensione di Encoder, impossibile registrare un nuovo encoder", true);
+            return;
+        }
+
+        Constructor<? extends Encoder> constructor;
+        try {
+            constructor = (Constructor<? extends Encoder>) encoder_class.getConstructor();
+        }
+        catch (Exception e) {
+            Logger.log("impossibile trovare un constructor valido per la classe: (" + encoder_class.getName() + ")", true);
+            Logger.log(e.getMessage(), true, '\n', false);
+            return;
+        }
+
+        ServerManager.register_encoder(constructor, name);
+        Logger.log("registrato un nuovo encoder dalla classe: (" + encoder_class.getName() + ") con successo");
+    }
+
+    /**
+     * Data una classe con annotation {@code @Connector} controlla che questa sia estensione di {@code Connector} e in
+     * caso crea una nuova istanza e la registra in {@code ServerManager}
+     * @param connector_class classe da registrare
+     */
+    public static void load_connector(Class<?> connector_class) {
+        Logger.log("registro un nuovo connector dalla classe: (" + connector_class.getName() + ")");
+        String name = connector_class.getAnnotation(ConnectorDefinition.class).name();
+
+        if (!Connector.class.isAssignableFrom(connector_class)) {
+            Logger.log("la classe: (" + connector_class.getName() + ") con annotation: (ConnectorDefinition) non è estensione di Connector", true);
+            return;
+        }
+
+        Connector instance;
+        try {
+            instance = (Connector) connector_class.getConstructor().newInstance();
+        }
+        catch (Exception e) {
+            Logger.log("impossibile creare una nuova istanza della classe: (" + connector_class.getName() + ") e registrare un nuovo connector", true);
+            Logger.log(e.getMessage(), true, '\n', false);
+            return;
+        }
+
+        ServerManager.register_connector(instance, name);
+        Logger.log("registrato un nuovo connector dalla classe: (" + connector_class.getName() + ") con successo");
+    }
 }

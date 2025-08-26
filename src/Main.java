@@ -1,6 +1,7 @@
 import files.FileCipher;
 import files.FileInterface;
 import files.Logger;
+import files.ModLoader;
 import gui.MollyFrame;
 import gui.settingsFrame.SettingsFrame;
 import gui.temppanel.TempPanel;
@@ -10,12 +11,14 @@ import gui.themes.GraphicsSettings;
 
 import javax.swing.*;
 import java.awt.*;
+import java.lang.reflect.Method;
 import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.Vector;
 
 public class Main {
     private static byte[] file_key_test;
+    private static Vector<Method> end_method;
 
     public static void main(String[] args) {
         Runtime.getRuntime().addShutdownHook(shut_down);
@@ -29,13 +32,35 @@ public class Main {
         }
 
         FileInterface.search_files();
-        //todo load mods
+
+        Vector<Method>[] run_method = new ModLoader().load_mods();
+        end_method = run_method[3];
+        Logger.log("chiamo tutti i metodi da eseguire prima dell'inizializzazione delle altre componenti");
+        exec_methods(run_method[0]);
+
         GraphicsSettings.load_from_files();
         MollyFrame.init();
         SettingsFrame.init();
 
+        Logger.log("chiamo tutti i metodi da eseguire prima dopo l'inizializzazione delle altre componenti");
+        exec_methods(run_method[1]);
 
         request_file_psw();
+
+        Logger.log("chiamo tutti i metodi da eseguire dopo aver sbloccato i file cifrati");
+        exec_methods(run_method[2]);
+    }
+
+    private static void exec_methods(Vector<Method> methods) {
+        for (Method m : methods) {
+            try {
+                m.invoke(null);
+            }
+            catch (Exception e) {
+                Logger.log("impossibile eseguire il metodo: (" + m.getName() + ")", true);
+                Logger.log(e.getMessage(), true, '\n', false);
+            }
+        }
     }
 
     private static void request_file_psw() {
@@ -104,5 +129,8 @@ public class Main {
     private static final Thread shut_down = new Thread(() -> {
         //salva tutte le informazioni in files
         FileInterface.update_files();
+
+        Logger.log("chiamo tutti i metodi da eseguire alla chiusura del software");
+        exec_methods(end_method);
     });
 }

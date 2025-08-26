@@ -169,17 +169,17 @@ public class ServerManager {
     /**
      * Dalla definizione di una classe che estende {@code Encoder} trova il constructor e lo registra fra gli encoder
      * disponibili per le connessioni
-     * @param encoder_class classe che specifica un encoder
+     * @param encoder_const classe che specifica un encoder
      * @param encoder_name  nome dell encoder da aggiungere
      */
-    public static void register_encoder(Class<? extends Encoder> encoder_class, String encoder_name) {
+    public static void register_encoder(Constructor<? extends Encoder> encoder_const, String encoder_name) {
         if (registered_encoders.containsKey(encoder_name)) {
             Logger.log("impossibile registrare più di un Encoder con il nome: (" + encoder_name + ")", true);
             return;
         }
 
         try {
-            registered_encoders.put(encoder_name, encoder_class.getConstructor());
+            registered_encoders.put(encoder_name, encoder_const);
         }
         catch (Exception e) {
             Logger.log("impossibile trovare il constructor per l'encoder: (" + encoder_name + ")", true);
