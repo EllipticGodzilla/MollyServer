@@ -306,7 +306,28 @@ public class ServerManager {
             return false;
         }
 
-        power_on_connectors();
+        if (active_login_manager == null) { //se non imposta un login manager non è possibile accendere il server
+            Logger.log("impossibile accendere il server se non è impostato un login manager", true);
+            TempPanel.show(new TempPanel_info(
+                    TempPanel_info.SINGLE_MSG,
+                    false,
+                    "impostare un login manager prima di accendere il server"
+            ), null);
+
+            return false;
+        }
+
+        if (!power_on_connectors()) {
+            Logger.log("impossibile accendere il server se non sono registrati connector attivi", true);
+            TempPanel.show(new TempPanel_info(
+                    TempPanel_info.SINGLE_MSG,
+                    false,
+                    "attivare dei connector prima di accendere il server"
+            ), null);
+
+            return false;
+        }
+
         Logger.log("accesi tutti i connectors");
         server_status = true; //impostato ora altrimenti in caso di errore con i worker threads power_off() fallisce
 
@@ -329,8 +350,10 @@ public class ServerManager {
 
     /**
      * Nel processo di accendere il server accende tutti i connectors rendendosi visibile alla rete e i clients
+     * @return {@code true} se l'opearzione è andata a buon fine, {@code false} se non ci sono connector attivi e non
+     * ha senso accendere il server
      */
-    private static void power_on_connectors() {
+    private static boolean power_on_connectors() {
         boolean no_connector = true; //se non ha connector attivi mostra un avviso
 
         for (Pair<Connector, Boolean> pair : registered_connectors.values()) {
@@ -342,13 +365,7 @@ public class ServerManager {
             }
         }
 
-        if (no_connector) { //nessun connector è attivo
-            TempPanel.show(new TempPanel_info(
-                    TempPanel_info.SINGLE_MSG,
-                    false,
-                    "il server è acceso ma nessun connector è attivo"
-            ), null);
-        }
+        return !no_connector;
     }
 
     /**

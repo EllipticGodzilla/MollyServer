@@ -5,14 +5,14 @@ import files.Logger;
 import files.Pair;
 import gui.custom.*;
 import gui.themes.GraphicsSettings;
+import network.ClientsInterface;
+import network.LoginManager;
 import network.ServerManager;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.event.ActionListener;
-import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.Vector;
 
 //pannello mostrato da MollySettingsPanel "server/network settings", permette di modificare le impostazioni su login
@@ -41,22 +41,48 @@ public class NetworkSettings implements SettingsComponent {
     //scroll pane con la lista di tutti i connector che permette di modificare o visualizzare se sono attivi / accesi
     private static final ConnectorListDisplayer connector_displayer = new ConnectorListDisplayer(new JPanel());
 
-    //mappa con gli status modificati dei connector, true = attivo, false = disattivo
-    private static final Map<String, Boolean> connector_status_map = new LinkedHashMap<>();
-
     //labels per specificare a cosa si riferiscono vari componenti
     private static final JLabel lm_label = new JLabel("Login manager:"),
                                 wtn_label = new JLabel("Worker threads number:"),
                                 wtb_label = new JLabel("worker threads backlog capacity:"),
                                 c_label = new JLabel("connector:");
 
-    public static final ActionListener ok_listener = _ -> {
-
-    };
-
     public static final ActionListener apply_listener = _ -> {
+        //è possibile modificare login manager o worker threads solo a server spento
+        if (!ServerManager.is_online()) {
+            change_login_manager();
+            change_worker_threads();
+        }
 
+        connector_displayer.apply_changes();
     };
+
+    public static final ActionListener ok_listener = _ -> {
+        apply_listener.actionPerformed(null);
+        SettingsFrame.close();
+    };
+
+    /**
+     * Applica tutte le modifiche apportate sul login manager attivo / utenti relativi a utenti in vari login manager
+     */
+    private static void change_login_manager() {
+        String new_manager = (String) login_manager_combobox.getSelectedItem();
+        if (new_manager == null) { //la combobox è vuota, non ci sono login manager fra cui scegliere
+            return;
+        }
+
+        String current_manager = (ServerManager.get_login_manager() == null)? null : ServerManager.get_login_manager().get_name();
+        if (!new_manager.equals(current_manager)) { //ha cambiato il login manager
+            Logger.log("cambio il login manager da: (" + current_manager + ") a: (" + new_manager + ")");
+            ServerManager.set_login_manager(new_manager);
+        }
+    }
+
+    /// Applica tutte le modifiche apportate ai parametri per i worker threads, numero e backlog capacity
+    private static void change_worker_threads() {
+        ClientsInterface.set_workers_number(wt_number_filed.get_value());
+        ClientsInterface.set_workers_backlog_capacity(wt_backlog_field.get_value());
+    }
 
     /**
      * Inizializza tutte le componenti grafiche, senza specificare il contenuto, aggiungendole ai vari panel e
@@ -102,12 +128,10 @@ public class NetworkSettings implements SettingsComponent {
 
         //init components
         MList rc_list = new MList("network settings, registered clients list");
-        rc_list.setComponentPopupMenu(new RegisteredClientsList.Popup());
         registered_clients_list = new RegisteredClientsList(rc_list);
 
         login_manager_combobox.setPreferredSize(new Dimension(150, 20));
         login_manager_combobox.addActionListener(_ -> {
-            //todo save changes to users
             registered_clients_list.display_login_manager((String) login_manager_combobox.getSelectedItem());
         });
         registered_clients_list.setPreferredSize(new Dimension(0, 150));
@@ -224,6 +248,14 @@ public class NetworkSettings implements SettingsComponent {
         update_colors();
 
         login_manager_combobox.set_list(ServerManager.get_available_login_managers().toArray(new String[0]));
+        LoginManager manager = ServerManager.get_login_manager();
+        if (manager != null) {
+            login_manager_combobox.setSelectedItem(manager.get_name());
+        }
+
+        registered_clients_list.display_login_manager((String) login_manager_combobox.getSelectedItem());
+        wt_number_filed.set_value(ClientsInterface.get_workers_number());
+        wt_backlog_field.set_value(ClientsInterface.get_workers_backlog_capacity());
 
         update_connectors_status();
 
@@ -254,13 +286,6 @@ public class NetworkSettings implements SettingsComponent {
 
 //pannello che mostra la lista di tutti i clients registrati nei vari login manager
 class RegisteredClientsList extends MScrollPane {
-    public static class Popup extends MPopupMenu {
-        public Popup() {
-            this.add(new MMenuItem("delete"));
-            this.add(new MMenuItem("change password"));
-        }
-    }
-
     private final MList clients_list;
 
     public RegisteredClientsList(Component c) {
@@ -439,18 +464,23 @@ class ConnectorListDisplayer extends MScrollPane {
             return;
         }
 
-        if (active) {
-            checkbox.setSelected(true);
-        }
-        else {
-            checkbox.setSelected(false);
-        }
+        checkbox.setSelected(active);
+        power_status.setIcon(powered? green_dot : red_dot);
+    }
 
-        if (powered) {
-            power_status.setIcon(green_dot);
-        }
-        else {
-            power_status.setIcon(red_dot);
+    /// Applica tutte le modifiche ai parametri dei connector attivando e disattivandoli in base alle checkbox
+    public void apply_changes() {
+        String[] connector_list = ServerManager.get_connectors_list();
+
+        for (int i = 0; i < connector_list.length; i++) {
+            JCheckBox active = (JCheckBox) contained_panel.getComponent(3*i);
+
+            if (active.isSelected()) {
+                ServerManager.activate_connector(connector_list[i]);
+            }
+            else {
+                ServerManager.deactivate_connector(connector_list[i]);
+            }
         }
     }
 
@@ -461,6 +491,8 @@ class ConnectorListDisplayer extends MScrollPane {
         checkbox_on = (ImageIcon) GraphicsSettings.active_theme().get_value("checkbox_on");
         checkbox_off = (ImageIcon) GraphicsSettings.active_theme().get_value("checkbox_off");
         Color text_color = (Color) GraphicsSettings.active_theme().get_value("text_color");
+        green_dot = (ImageIcon) GraphicsSettings.active_theme().get_value("green_dot_icon");
+        red_dot = (ImageIcon) GraphicsSettings.active_theme().get_value("red_dot_icon");
 
         for (Component c : contained_panel.getComponents()) {
             if (c instanceof JLabel label) {
