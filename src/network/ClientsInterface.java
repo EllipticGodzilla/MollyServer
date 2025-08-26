@@ -56,7 +56,7 @@ public abstract class ClientsInterface {
         }
 
         if (size <= 0) {
-            Logger.log("impossibile impostare la dimensione del backlog dei workers threads ad un numero negativo: " + size, true);
+            Logger.log("impossibile impostare la dimensione del backlog dei workers threads ad un numero <= 0: " + size, true);
             return;
         }
 

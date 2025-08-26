@@ -7,6 +7,7 @@ import gui.temppanel.TempPanel;
 import gui.temppanel.TempPanel_info;
 
 import java.lang.reflect.Constructor;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
@@ -37,6 +38,109 @@ public class ServerManager {
      * {@code true} rappresenta il server attivo e in attesa di nuove connessioni dai clients
      */
     private static boolean server_status = false;
+
+    //      STATUS FILE UPDATES
+
+    /**
+     * Aggiunge a FileInterface un updater e un loader per il file {@code database/status.dat} contenente varie
+     * informazioni sullo stato del server, cioè:
+     * <ul>
+     *     <li>
+     *         Numero di worker threads
+     *     </li>
+     *     <li>
+     *         Capacità del backlog per i worker thread
+     *     </li>
+     *     <li>
+     *         Login manager da utilizzare
+     *     </li>
+     *     <li>
+     *         Nome di ogni connector da attivare
+     *     </li>
+     * </ul>
+     * Queste informazioni sono formattate su 4 linee, dove i nomi dei connector vengono separati da {@code ;}
+     */
+    public static void init_status_file() {
+        FileInterface.add_file_loader(status_file_loader);
+        FileInterface.add_file_updater(status_file_updater);
+    }
+
+    private static final Runnable status_file_loader = () -> {
+        Logger.log("carico tutte le informazioni dal file status.dat");
+
+        byte[] file_data = FileInterface.read_file("database/status.dat");
+        if (file_data == null) {
+            Logger.log("impossibile leggere il contenuto del file status.dat e inizializzare il network", true);
+            return;
+        }
+
+        /*
+         * Viene aggiunto un punto alla fine del testo poiché altrimenti in caso non ci siano connector attivi non viene
+         * separato in 4 linee ma solo 3 / 2.
+         * Non crea nessun problema poiché in ogni caso questa lista viene utilizzata solo per controllare se alcuni
+         * connector sono li contenuti. E se un connector o più sono in questa lista, finisce con un ";" quindi il "."
+         * verrà interpretato come un nuovo connector e ignorato nei prossimi passaggi.
+         * L'unico caso in cui questo porta a problemi è quando un connector legittimo viene chiamato "."
+         */
+        String[] file_lines = (new String(file_data) + ".").split("\n");
+        if (file_lines.length != 4) {
+            Logger.log("impossibile comprendere il contenuto del file status.dat, non sono contenute 4 righe ma: (" + file_lines.length + ")", true);
+            return;
+        }
+
+        try {
+            ClientsInterface.set_workers_number(Integer.parseInt(file_lines[0]));
+        }
+        catch (NumberFormatException _) {
+            Logger.log("impossibile comprendere la prima linea del file status.dat: (" + file_lines[0] + "), era atteso un numero", true);
+        }
+
+        try {
+            ClientsInterface.set_workers_backlog_capacity(Integer.parseInt(file_lines[1]));
+        }
+        catch (NumberFormatException _) {
+            Logger.log("impossibile comprendere la seconda linea del file status.dat: (" + file_lines[1] + "), era atteso un numero", true);
+        }
+
+        ServerManager.set_login_manager(file_lines[2]);
+
+        String[] connector_list = ServerManager.get_connectors_list();
+        String[] active_connector = file_lines[3].split(";");
+        Arrays.sort(active_connector); //esegue una binary search più avanti
+
+        for (String connector : connector_list) {
+            if (Arrays.binarySearch(active_connector, connector) < 0) { //il connector non è in active_connector
+                ServerManager.deactivate_connector(connector);
+            }
+            else {
+                ServerManager.activate_connector(connector);
+            }
+        }
+        Logger.log("caricate tutte le informazioni dal file: (status.dat)");
+    };
+
+    private static final Runnable status_file_updater = () -> {
+        StringBuilder file_text = new StringBuilder();
+
+        file_text.append(ClientsInterface.get_workers_number()).append("\n")
+                 .append(ClientsInterface.get_workers_backlog_capacity()).append("\n");
+
+        LoginManager manager = ServerManager.get_login_manager();
+        if (manager != null) {
+            file_text.append(manager.get_name());
+        }
+        file_text.append("\n");
+
+        String[] connectors_list = ServerManager.get_connectors_list();
+        for (String connector : connectors_list) {
+            if (ServerManager.get_connector_status(connector).first()) { //se il connector è attivo
+                file_text.append(connector).append(";");
+            }
+        }
+
+        FileInterface.overwrite_file("database/status.dat", file_text.toString().getBytes());
+        Logger.log("aggiornate tutte le informazioni sul file status.dat");
+    };
 
     //      LOGIN_MANAGER CHANGES
 

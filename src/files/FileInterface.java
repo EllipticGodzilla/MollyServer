@@ -130,9 +130,9 @@ public abstract class FileInterface {
         new File(jar_path + "/mods").mkdir();
 
         create_file("database/graphics/default.dat", false);
-        create_file("database/users/default.dat", false);
-        create_file("database/certificate.dat", false);
+        create_file("database/certificate.dat", true);
         create_file("database/TerminalLog.dat", false);
+        create_file("database/status.dat", true);
     }
 
     private static void search_folder(File folder) {

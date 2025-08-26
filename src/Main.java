@@ -8,6 +8,7 @@ import gui.temppanel.TempPanel;
 import gui.temppanel.TempPanel_action;
 import gui.temppanel.TempPanel_info;
 import gui.themes.GraphicsSettings;
+import network.ServerManager;
 
 import javax.swing.*;
 import java.awt.*;
@@ -41,6 +42,7 @@ public class Main {
         GraphicsSettings.load_from_files();
         MollyFrame.init();
         SettingsFrame.init();
+        ServerManager.init_status_file();
 
         Logger.log("chiamo tutti i metodi da eseguire prima dopo l'inizializzazione delle altre componenti");
         exec_methods(run_method[1]);
