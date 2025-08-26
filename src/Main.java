@@ -8,6 +8,8 @@ import gui.temppanel.TempPanel_action;
 import gui.temppanel.TempPanel_info;
 import gui.themes.GraphicsSettings;
 
+import javax.swing.*;
+import java.awt.*;
 import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.Vector;

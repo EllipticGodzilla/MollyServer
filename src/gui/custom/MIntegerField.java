@@ -17,7 +17,7 @@ public class MIntegerField extends JTextField {
     private String prev_value = "";
 
     public MIntegerField(int min, int max) {
-        super();
+        super(Integer.toString(min));
         this.MAX = max;
         this.MIN = min;
 
@@ -77,11 +77,11 @@ public class MIntegerField extends JTextField {
                 return "0";
             }
 
-            if (input_num > 255)
-                input_num = 255;
+            if (input_num > MAX)
+                input_num = MAX;
 
-            if (input_num < -1)
-                input_num = -1;
+            if (input_num < MIN)
+                input_num = MIN;
 
             return Integer.toString(input_num);
         }

@@ -6,6 +6,8 @@ import javax.swing.*;
 import javax.swing.border.Border;
 import javax.swing.plaf.metal.MetalComboBoxButton;
 import java.awt.*;
+import java.util.Set;
+import java.util.Vector;
 
 public class MComboBox extends JComboBox<String> {
     public MComboBox(String[] list) {
@@ -30,7 +32,7 @@ public class MComboBox extends JComboBox<String> {
         ((MetalComboBoxButton) this.getComponents()[0]).setBorder(null);
     }
 
-    public void update_color() {
+    public void update_colors() {
         this.setBackground((Color) GraphicsSettings.active_theme().get_value("input_background"));
         this.setForeground((Color) GraphicsSettings.active_theme().get_value("input_text_color"));
         this.setBorder((Border) GraphicsSettings.active_theme().get_value(("input_border")));

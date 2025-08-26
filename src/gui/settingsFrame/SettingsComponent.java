@@ -1,10 +1,10 @@
 package gui.settingsFrame;
 
-import javax.swing.*;
+import java.awt.*;
 
 //template che devono seguire tutti i pannelli per essere visualizzati dal SettingsFrame
-public interface SettingsPanel {
-    JPanel prepare();
+public interface SettingsComponent {
+    Component prepare();
     void close();
     void update_colors();
 }

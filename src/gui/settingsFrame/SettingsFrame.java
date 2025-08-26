@@ -14,7 +14,7 @@ import java.awt.event.WindowListener;
 //frame che mostra tutti i pannelli per le impostazioni
 public abstract class SettingsFrame {
     private static final JFrame frame = new JFrame();
-    private static SettingsPanel visible_panel;
+    private static SettingsComponent visible_panel;
 
     private static final JButton ok_button = new JButton();
     private static final JButton cancel_button = new JButton();
@@ -118,7 +118,7 @@ public abstract class SettingsFrame {
         apply_button.setPressedIcon(apply_icons.getPressedIcon());
     }
 
-    public static void show(SettingsPanel panel_wrapper, String name) {
+    public static void show(SettingsComponent panel_wrapper, String name) {
         if (visible_panel != null) {
             //anche se già visibile chiamare setVisible(true) porta il frame in primo piano
             frame.setVisible(true);

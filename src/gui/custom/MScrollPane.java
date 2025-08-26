@@ -13,6 +13,8 @@ public class MScrollPane extends JScrollPane {
         this.getViewport().setOpaque(false);
         this.setAutoscrolls(true);
         this.setBorder(null);
+
+        set_scrollbar_thickness(10);
     }
 
     public void update_colors() {

@@ -15,12 +15,12 @@ import java.awt.event.ActionListener;
  * permette alle mod di aggiungere delle loro impostazioni, il funzionamento è esattamente come MollySettingsPanel
  * potendo registrare SettingsPanel che vengono selezionati da un CascateMenu e visualizzati in questo pannello
  */
-public class ModManagerPanel implements SettingsPanel {
+public class ModManagerPanel implements SettingsComponent {
     private static final JPanel main_panel = new JPanel();
     private static final JPanel menu_container = new JPanel();
     private static final MScrollPane menu_scroller = new MScrollPane(menu_container);
 
-    private static SettingsPanel visible_panel;
+    private static SettingsComponent visible_panel;
 
     public static void init() {
         main_panel.setLayout(new GridBagLayout());
@@ -68,16 +68,16 @@ public class ModManagerPanel implements SettingsPanel {
         }
     }
 
-    public static boolean add_item(String path, SettingsPanel panel, ActionListener ok_listener, ActionListener apply_listener) {
+    public static boolean add_item(String path, SettingsComponent component, ActionListener ok_listener, ActionListener apply_listener) {
         CascateAction action = _ -> {
             if (visible_panel != null) {
                 visible_panel.close();
                 main_panel.remove(2); //il secondo componente di main_panel è sempre il pannello visibile
             }
-            visible_panel = panel;
+            visible_panel = component;
 
-            JPanel visible_panel = panel.prepare();
-            visible_panel.setPreferredSize(new Dimension(550, 0));
+            Component visible_component = component.prepare();
+            visible_component.setPreferredSize(new Dimension(550, 0));
 
             GridBagConstraints c = new GridBagConstraints();
 
@@ -87,7 +87,7 @@ public class ModManagerPanel implements SettingsPanel {
             c.weighty = 1;
             c.fill = GridBagConstraints.BOTH;
 
-            main_panel.add(visible_panel, c);
+            main_panel.add(visible_component, c);
             main_panel.updateUI();
 
             SettingsFrame.set_action_listener(ok_listener, SettingsFrame.OK_BUTTON);
@@ -96,7 +96,7 @@ public class ModManagerPanel implements SettingsPanel {
         int root_menu_len = path.indexOf('/');
 
         if (root_menu_len == -1) {
-            Logger.log("impossibile aggiungere CascateItem direttamente al ModSettings panel, specificare un root menu per: " + path, true);
+            Logger.log("impossibile aggiungere CascateItem direttamente al ModSettings component, specificare un root menu per: " + path, true);
             return false;
         } else {
             String root_menu_name = path.substring(0, root_menu_len);

@@ -35,8 +35,8 @@ public abstract class Connector {
     public abstract void stop();
 
     /**
-     * @return {@code true} se il connector è attivo e in attesa di nuove connessioni di clients, {@code false} se è
-     * stoppato e il server non è visibile a clients attraverso il canale definito da questo connector
+     * @return {@code true} se il connector è acceso e in attesa di nuove connessioni di clients, {@code false} se è
+     * spento e il server non è visibile a clients attraverso il canale definito da questo connector
      */
     public abstract boolean get_status();
 

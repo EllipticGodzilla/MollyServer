@@ -228,6 +228,29 @@ public class ServerManager {
         return registered_encoders.containsKey(encoder_name);
     }
 
+    /**
+     * Lo stato di ogni connector è definito da due bool:
+     * <ul>
+     *     <li>
+     *         {@code active:} se il connector è attivo vuol dire che verrà acceso e spento assieme al server, mentre
+     *         i connector disattivi vengono ignorati anche all'accensione del server
+     *     </li>
+     *     <li>
+     *         {@code power:} se il connector è acceso vuol dire che il server è acceso ed è in attesa di nuovi client,
+     *         un connector spento non è in attesa di nuovi client ma chiaramente può essere attivo.
+     *     </li>
+     * </ul>
+     * @param connector_name nome del connector di cui si vuole sapere lo status
+     * @return una coppia di bool rappresentanti rispettivamente {@code active status}, {@code power status}
+     */
+    public static Pair<Boolean, Boolean> get_connector_status(String connector_name) {
+        Pair<Connector, Boolean> data = registered_connectors.get(connector_name);
+        return new Pair<>(
+                data.second(),
+                data.first().get_status()
+        );
+    }
+
     //      SERVER STATUS
 
     /// Ritorna {@code true} se il server è attivo, {@code false} se spento e non raggiungibile da nessun clients

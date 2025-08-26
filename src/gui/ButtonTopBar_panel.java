@@ -7,6 +7,7 @@ import gui.custom.ButtonInfo;
 import gui.temppanel.TempPanel;
 import gui.temppanel.TempPanel_info;
 import gui.themes.GraphicsSettings;
+import network.ServerManager;
 
 import javax.swing.*;
 import java.awt.*;
@@ -77,6 +78,8 @@ public abstract class ButtonTopBar_panel {
         right_shift.addActionListener(RIGHTSHIFT_LISTENER);
         left_shift.addActionListener(LEFTSHIFT_LISTENER);
         stop_mod.addActionListener(STOP_LISTENER);
+        start_server.addActionListener(_ -> ServerManager.power_on());
+        stop_server.addActionListener(_ -> ServerManager.power_off());
 
         right_shift.setOpaque(false);
         left_shift.setOpaque(false);

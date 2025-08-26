@@ -63,7 +63,11 @@ public class GraphicsTheme {
             "scroll_bar_thumb_darkshadow_color",
             "scroll_bar_thumb_highlight_color",
             "scroll_bar_rail_color",
-            "cascate_item_icon" //50
+            "cascate_item_icon", //50
+            "checkbox_on_icon",
+            "checkbox_off_icon",
+            "green_dot_icon",
+            "red_dot_icon"
     );
     private static GraphicsOptionBuilder<?>[] builders = new GraphicsOptionBuilder[] {  //array con tutti i diversi builder registrati
             new ColorBuilder(),
@@ -82,7 +86,8 @@ public class GraphicsTheme {
             1, 0, 1, 1, 1,
             0, 0, 3, 0, 0,
             1, 1, 1, 2, 2,
-            0, 0, 0, 0, 2
+            0, 0, 0, 0, 2,
+            2, 2, 2, 2
     };
     private static Object[] std_values = new Object[] { //valori standard per ogni chiave
             new Color(58, 61, 63), //frame_background
@@ -236,7 +241,11 @@ public class GraphicsTheme {
             new Color(58, 61, 63), //scroll_bar_thumb_darkshadow_color
             new Color(108, 111, 113), //scroll_bar_thumb_highlight_color
             new Color(128, 131, 133), //scroll_bar_rail_color
-            new ImageIcon(get_resource("/images/cascate_icon.png")) //cascate_item_icon                        (50)
+            new ImageIcon(get_resource("/images/cascate_icon.png")), //cascate_item_icon                       (50)
+            new ImageIcon(get_resource("/images/checkbox_sel.png")), //checkbox_on_icon
+            new ImageIcon(get_resource("/images/checkbox_dis.png")), //checkbox_off_icon
+            new ImageIcon(get_resource("/images/green_dot.png")), //green_dot_icon
+            new ImageIcon(get_resource("/images/red_dot.png")) //red_dot_icon
     };
     private static String get_resource(String path) {
         return GraphicsTheme.class.getResource(path).getPath();

@@ -16,7 +16,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-public class FileManagerPanel implements SettingsPanel {
+public class FileManagerPanel implements SettingsComponent {
     private static final JPanel main_panel = new JPanel();
     private static final FileEditorPanel content_panel = new FileEditorPanel();
     private static final CascateMenu file_tree = new CascateMenu("root", "", new CascateItem[1]);
@@ -123,8 +123,8 @@ class FileEditorPanel extends JPanel {
     private final MScrollPane text_area_scroller = new MScrollPane(text_area);
     private final JButton encoded_checkbox = new JButton();
 
-    private static final ImageIcon CHECKBOX_DIS = new ImageIcon(FileEditorPanel.class.getResource("/images/checkbox_dis.png"));
-    private static final ImageIcon CHECKBOX_SEL = new ImageIcon(FileEditorPanel.class.getResource("/images/checkbox_sel.png"));
+    private static ImageIcon checkbox_dis = (ImageIcon) GraphicsSettings.active_theme().get_value("checkbox_off_icon");
+    private static ImageIcon checkbox_sel = (ImageIcon) GraphicsSettings.active_theme().get_value("checkbox_on_icon");
 
     private String original_text = null;
     private String original_name = null;
@@ -145,7 +145,7 @@ class FileEditorPanel extends JPanel {
         text_area.setEditable(false);
 
         encoded_checkbox.setBorder(null);
-        encoded_checkbox.setIcon(CHECKBOX_DIS);
+        encoded_checkbox.setIcon(checkbox_dis);
         encoded_checkbox.addActionListener(CHECKBOX_LISTENER);
         encoded_checkbox.setOpaque(false);
         encoded_checkbox.setContentAreaFilled(false);
@@ -187,14 +187,17 @@ class FileEditorPanel extends JPanel {
         text_area.setForeground((Color) GraphicsSettings.active_theme().get_value("input_text_color"));
         text_area.setBorder((Border) GraphicsSettings.active_theme().get_value("input_border"));
         text_area_scroller.update_colors();
+
+        checkbox_dis = (ImageIcon) GraphicsSettings.active_theme().get_value("checkbox_off_icon");
+        checkbox_sel = (ImageIcon) GraphicsSettings.active_theme().get_value("checkbox_on_icon");
     }
 
     private ActionListener CHECKBOX_LISTENER = _ -> {
-        if (encoded_checkbox.getIcon().equals(CHECKBOX_SEL)) { //se il file ora è cifrato, si vuole impostare come in chiaro
-            encoded_checkbox.setIcon(CHECKBOX_DIS);
+        if (encoded_checkbox.getIcon().equals(checkbox_sel)) { //se il file ora è cifrato, si vuole impostare come in chiaro
+            encoded_checkbox.setIcon(checkbox_dis);
         }
         else { //il file ora non è cifrato, si vuole iniziare a cifrare
-            encoded_checkbox.setIcon(CHECKBOX_SEL);
+            encoded_checkbox.setIcon(checkbox_sel);
         }
     };
 
@@ -208,7 +211,7 @@ class FileEditorPanel extends JPanel {
     }
 
     public void save_changes() {
-        boolean is_encoded = encoded_checkbox.getIcon().equals(CHECKBOX_SEL);
+        boolean is_encoded = encoded_checkbox.getIcon().equals(checkbox_sel);
 
         if (original_text != null && (!original_text.equals(text_area.getText()) || original_encoded != is_encoded)) { //se ci sono state modifiche
             FileManagerPanel.save_changes(original_name, text_area.getText(), is_encoded); //salva le modifiche apportate al file
@@ -233,7 +236,7 @@ class FileEditorPanel extends JPanel {
         boolean is_encoded = FileInterface.is_encoded(name) == 1; // non può ritornare -1 poichè già con file_cont != null sappiamo che il file esiste
 
         info_field.setText("file: " + name + ", encoded:");
-        encoded_checkbox.setIcon(is_encoded? CHECKBOX_SEL: CHECKBOX_DIS);
+        encoded_checkbox.setIcon(is_encoded? checkbox_sel : checkbox_dis);
         text_area.setText(file_content);
         text_area.setEditable(true);
 
